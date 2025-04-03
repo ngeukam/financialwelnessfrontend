@@ -10,10 +10,12 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  TextField
+  TextField,
+  ButtonGroup
 } from '@mui/material';
 import useApi from '../hooks/APIHandler';
 import { BarChart } from '@mui/x-charts/BarChart';
+import { PieChart } from '@mui/x-charts/PieChart';
 import { DataGrid } from '@mui/x-data-grid';
 import { useTheme } from '@mui/material/styles';
 
@@ -25,6 +27,7 @@ const DataVisualisation = () => {
   const [operation, setOperation] = useState('describe');
   const [parameters, setParameters] = useState({});
   const { callApi } = useApi();
+  const [chartType, setChartType] = useState('bar');
   const theme = useTheme();
   // Fetch files on component mount
   useEffect(() => {
@@ -45,32 +48,84 @@ const DataVisualisation = () => {
 
   // Available operations with their parameters
   const operations = {
-    describe: { name: 'Basic Statistics', parameters: [] },
-    correlation: { name: 'Correlation Matrix', parameters: [] },
+    describe: {
+      name: 'Basic Statistics',
+      parameters: [],
+      description: 'Show descriptive statistics for all numeric columns'
+    },
+    correlation: {
+      name: 'Correlation Matrix',
+      parameters: [],
+      description: 'Calculate pairwise correlations between numeric columns'
+    },
     value_counts: {
       name: 'Value Counts',
-      parameters: [{ name: 'column', type: 'column' }]
+      parameters: [{ name: 'column', type: 'column' }],
+      description: 'Count frequency of unique values in a column'
+    },
+    time_series: {
+      name: 'Time Series Analysis',
+      parameters: [
+        { name: 'date_column', type: 'column', required: true },
+        { name: 'value_column', type: 'column', required: true },
+        { name: 'frequency', type: 'select', options: ['D', 'W', 'M', 'Q', 'Y'], default: 'D' },
+        { name: 'agg_function', type: 'select', options: ['sum', 'mean', 'median', 'min', 'max'], default: 'sum' }
+      ],
+      description: 'Analyze trends and patterns over time'
+    },
+    correlation_extreme: {
+      name: 'Extreme Correlations',
+      parameters: [
+        { name: 'threshold', type: 'number', default: 0.8, min: 0, max: 1, step: 0.05 },
+        { name: 'direction', type: 'select', options: ['positive', 'negative', 'both'], default: 'both' }
+      ],
+      description: 'Find strongly correlated feature pairs above threshold'
+    },
+    pattern_detect: {
+      name: 'Pattern Detection',
+      parameters: [
+        { name: 'target_column', type: 'column', required: true },
+        { name: 'pattern_type', type: 'select', options: ['seasonal', 'trend', 'outlier', 'change_point'], default: 'seasonal' },
+        { name: 'sensitivity', type: 'number', default: 0.7, min: 0, max: 1, step: 0.1 }
+      ],
+      description: 'Identify patterns and anomalies in data'
+    },
+    nested_aggregate: {
+      name: 'Nested Aggregation',
+      parameters: [
+        { name: 'group_by', type: 'multi-column', required: true },
+        { name: 'agg_columns', type: 'multi-column', required: true },
+        {
+          name: 'agg_functions', type: 'multi-select',
+          options: ['sum', 'mean', 'count', 'min', 'max', 'median', 'std'],
+          default: ['mean']
+        }
+      ],
+      description: 'Aggregate data by multiple grouping levels'
     },
     linear_regression: {
       name: 'Linear Regression',
       parameters: [
         { name: 'x_column', type: 'column' },
         { name: 'y_column', type: 'column' }
-      ]
+      ],
+      description: 'Perform simple linear regression analysis'
     },
     pca: {
       name: 'PCA',
       parameters: [
         { name: 'n_components', type: 'number', default: 2 },
         { name: 'features', type: 'multi-column' }
-      ]
+      ],
+      description: 'Principal Component Analysis for dimensionality reduction'
     },
     cluster: {
       name: 'Clustering',
       parameters: [
         { name: 'n_clusters', type: 'number', default: 3 },
         { name: 'features', type: 'multi-column' }
-      ]
+      ],
+      description: 'Group similar data points using clustering algorithms'
     }
   };
 
@@ -92,9 +147,9 @@ const DataVisualisation = () => {
           parameters
         }
       });
+      console.log('response', response)
       setAnalysisResult(response.data?.analysis);
     } catch (error) {
-      console.error('Analysis failed:', error);
     } finally {
       setLoading(false);
     }
@@ -165,51 +220,120 @@ const DataVisualisation = () => {
 
   // Render analysis results
   const renderAnalysisResult = () => {
-    if (!analysisResult?.result) return null;
+    if (!analysisResult) return null;
 
-    const { result } = analysisResult;
+    const result = analysisResult;
+
     if (operation === 'value_counts') {
-      const data = Object.entries(result).map(([value, count], index) => ({
-        id: index,  // Add unique ID
+      const data = Object.entries(result.counts).map(([value, count], index) => ({
+        id: index,
         value,
         count
       })).sort((a, b) => b.count - a.count);
+
       return (
         <Box sx={{ mt: 2 }}>
           <Typography variant="h6" gutterBottom>
-          Value Counts for {parameters.column}
-        </Typography>
+            Value Counts for {result.column}
+          </Typography>
 
-          {/* Bar chart for value counts */}
-          <Box sx={{ height: 400, mt: 2 }}>
-            <BarChart
-              dataset={data}
-              xAxis={[{ scaleType: 'band', dataKey: 'value' }]}
-              yAxis={[{ scaleType: 'linear', dataKey: 'count' }]}
-              series={[{ dataKey: 'count', label: 'Count' }]}
-              layout="vertical"
-              colors={[
-                theme.palette.primary.main,
-                // theme.palette.secondary.main,
-                // theme.palette.error.main,
-                // theme.palette.warning.main,
-                // theme.palette.success.main
-              ]}
-
-            />
+          {/* Chart type selector */}
+          <Box sx={{ mb: 2 }}>
+            <ButtonGroup variant="contained">
+              <Button
+                onClick={() => setChartType('bar')}
+                color={chartType === 'bar' ? 'primary' : 'inherit'}
+              >
+                Bar Chart
+              </Button>
+              <Button
+                onClick={() => setChartType('pie')}
+                color={chartType === 'pie' ? 'primary' : 'inherit'}
+              >
+                Pie Chart
+              </Button>
+            </ButtonGroup>
           </Box>
 
-          {/* Raw data table */}
+          {/* Conditional chart rendering */}
+          <Box sx={{ height: 400, mt: 1 }}>
+            {chartType === 'bar' ? (
+              <BarChart
+                dataset={data}
+                xAxis={[{
+                  scaleType: 'band',
+                  dataKey: 'value',
+                  label: result.column,
+                  tickLabelStyle: {
+                    angle: 45,
+                    textAnchor: 'start',
+                    fontSize: 12
+                  }
+                }]}
+                series={[{
+                  dataKey: 'count',
+                  label: 'Count',
+                  color: theme.palette.primary.main
+                }]}
+                layout="vertical"
+                margin={{ left: 100 }}
+              />
+            ) : (
+              <PieChart
+                series={[{
+                  data: data.map(item => ({
+                    id: item.id,
+                    value: item.count,
+                    label: item.value
+                  })),
+                  innerRadius: 30,
+                  outerRadius: 100,
+                  paddingAngle: 5,
+                  cornerRadius: 5,
+                  highlightScope: { faded: 'global', highlighted: 'item' },
+                  faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                  // hideLegend: true 
+                }]}
+                slotProps={{
+                  legend: {
+                    hidden: true,  // Alternative way to hide the legend
+                  },
+                }}
+                width={600}
+                height={300}
+              />
+            )}
+          </Box>
+
+          {/* Raw data table (unchanged) */}
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>Raw Data</Typography>
             <DataGrid
               rows={data}
               columns={[
-                { field: 'value', headerName: 'Value', width: 150 },
-                { field: 'count', headerName: 'Count', width: 100 }
+                {
+                  field: 'value',
+                  headerName: result.column,
+                  width: 300,
+                  renderCell: (params) => (
+                    <div style={{ whiteSpace: 'normal', lineHeight: 'normal' }}>
+                      {params.value}
+                    </div>
+                  )
+                },
+                {
+                  field: 'count',
+                  headerName: 'Count',
+                  width: 100
+                }
               ]}
               autoHeight
-              hideFooter
+              pageSizeOptions={[5, 10, 25]}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10, page: 0 },
+                },
+              }}
             />
           </Box>
         </Box>
@@ -224,7 +348,7 @@ const DataVisualisation = () => {
             alt="Analysis result"
             style={{ maxWidth: '100%' }}
           />
-          <pre style={{ overflowX: 'auto', background: '#f5f5f5', padding: '1rem' }}>
+          <pre style={{ overflowX: 'auto', padding: '1rem' }}>
             {JSON.stringify(result, null, 2)}
           </pre>
         </Box>
@@ -232,7 +356,7 @@ const DataVisualisation = () => {
     }
 
     return (
-      <pre style={{ overflowX: 'auto', background: '#f5f5f5', padding: '1rem' }}>
+      <pre style={{ overflowX: 'auto', padding: '1rem' }}>
         {JSON.stringify(result, null, 2)}
       </pre>
     );
@@ -279,13 +403,17 @@ const DataVisualisation = () => {
                 onChange={(e) => {
                   setOperation(e.target.value);
                   setParameters({});
+                  setAnalysisResult(null);
                 }}
                 label="Operation"
                 disabled={!selectedFile}
               >
                 {Object.entries(operations).map(([key, op]) => (
                   <MenuItem key={key} value={key}>
-                    {op.name}
+                    <Box>
+                      <div>{op.name}</div>
+                      <i>{op.description}</i>
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>

@@ -246,6 +246,9 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                                                                     <strong>Max:</strong> {column.max?.toLocaleString('fr-FR')}
                                                                 </Typography>
                                                                 <Typography variant="body2" color="text.secondary">
+                                                                    <strong>Sum:</strong> {column.sum?.toLocaleString('fr-FR')}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary">
                                                                     <strong>Avg:</strong> {column.mean?.toLocaleString('fr-FR')}
                                                                 </Typography>
                                                                 <Typography variant="body2" color="text.secondary">
