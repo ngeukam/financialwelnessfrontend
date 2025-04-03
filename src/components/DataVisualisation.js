@@ -78,7 +78,6 @@ const DataVisualisation = () => {
   const columns = selectedFile?.sample_data?.[0]
     ? Object.keys(selectedFile.sample_data[0])
     : [];
-
   // Perform analysis
   const handleAnalyze = async () => {
     if (!selectedFile?.id) return;

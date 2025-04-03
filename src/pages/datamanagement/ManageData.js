@@ -60,6 +60,39 @@ const ManageData = () => {
         setValue(newValue);
     };
 
+    // const parseRowIndices = (input) => {
+    //     if (!input) return null;
+        
+    //     try {
+    //         const parts = input.split(',').map(part => part.trim());
+    //         let indices = [];
+            
+    //         for (const part of parts) {
+    //             if (part.includes('-')) {
+    //                 const [start, end] = part.split('-').map(Number);
+    //                 indices.push(...Array.from({ length: end - start + 1 }, (_, i) => start + i));
+    //             } else {
+    //                 indices.push(Number(part));
+    //             }
+    //         }
+            
+    //         return indices.filter(index => !isNaN(index) && index > 0);
+    //     } catch (e) {
+    //         console.error("Error parsing row indices:", e);
+    //         return null;
+    //     }
+    // };
+
+    const parseColName = (columnNames) => {
+        
+        try {
+            let columns = Array.isArray(columnNames) ? columnNames : [columnNames];
+            return columns;
+        } catch (e) {
+            console.error("Error parsing row indices:", e);
+            return null;
+        }
+    };
     const onSubmit = async (data) => {
         const formData = new FormData();
         // Append files if they exist
@@ -71,11 +104,26 @@ const ManageData = () => {
         // Append processing options
         formData.append('data_name', data.data_name);
         formData.append('date_format', data.date_format);
-        formData.append('currency', data.currency || 'XAF');
+        formData.append('currency', data.currency);
+        // Handle row removal
+        const columnsToRemove = parseColName(data.columnsToRemove);
+        if (columnsToRemove && columnsToRemove.length > 0) {
+            formData.append('columns_to_remove', columnsToRemove.join(','));
+        }
+        
+        // Handle column removal
+        // if (data.columnsToRemove) {
+        //     formData.append('columns_to_remove', data.columnsToRemove);
+        // }
+        
+        // Handle empty values threshold
+        if (data.minEmptyValues) {
+            formData.append('min_empty_values', data.minEmptyValues);
+        }
     
         // Ajoutez les options de traitement comme champs séparés
-        formData.append('delete_duplicate', data.delete_duplicate);
-        formData.append('merge_existing', data.merge_existing);
+        // formData.append('delete_duplicate', data.delete_duplicate);
+        // formData.append('merge_existing', data.merge_existing);
 
         const response = await callApi({ url: 'datamanagement/process-and-upload/', method: 'POST', body: formData });
         if (response?.status === 201) {
@@ -174,9 +222,10 @@ const ManageData = () => {
                                         name: 'dataFiles',
                                         required: true,
                                         multiple: true,
-                                        maxFiles: 5,
+                                        // maxFiles: 5,
+                                        maxFiles:1,
                                         maxSize: 5 * 1024 * 1024, // 5MB
-                                        description: 'Drag and drop files or click to browse (max 5 files)'
+                                        description: 'Drag and drop files or click to browse (max 1 file)'
                                     }}
                                     control={control}
                                 />

@@ -41,9 +41,18 @@ const FileInputWithDragDrop = ({ field, control }) => {
   });
 
   const onDrop = useCallback((acceptedFiles) => {
-    const filesWithPreview = acceptedFiles.map(file => 
+    // Filter out duplicates by name and size
+    const newFiles = acceptedFiles.filter(newFile => 
+      !formFiles.some(existingFile => 
+        existingFile.name === newFile.name && 
+        existingFile.size === newFile.size
+      )
+    );
+
+    const filesWithPreview = newFiles.map(file => 
       Object.assign(file, { preview: URL.createObjectURL(file) })
     );
+    
     const updatedFiles = field.multiple ? [...formFiles, ...filesWithPreview] : filesWithPreview;
     onChange(updatedFiles);
   }, [onChange, formFiles, field.multiple]);
@@ -66,9 +75,15 @@ const FileInputWithDragDrop = ({ field, control }) => {
   const handleFileInputChange = (event) => {
     const files = Array.from(event.target.files);
     onDrop(files);
+    // Reset the input value to allow selecting the same file again
+    event.target.value = null;
   };
 
   const handleRemoveFile = (index) => {
+    // Revoke the object URL before removing
+    if (formFiles[index].preview) {
+      URL.revokeObjectURL(formFiles[index].preview);
+    }
     const updatedFiles = formFiles.filter((_, i) => i !== index);
     onChange(updatedFiles);
   };

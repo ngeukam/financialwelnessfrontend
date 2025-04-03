@@ -116,6 +116,31 @@ const CommonInputComponent = ({ field, sx }) => {
         placeholder={field.placeholder}
       />
     )
+  ) : field.type === "number" ? (  // ✅ Added Number Handling
+    <TextField
+      fullWidth
+      margin="normal"
+      sx={sx}
+      required={field.required}
+      key={field.name}
+      label={field.label}
+      error={!!errors[field.name]}
+      {...register(field.name, {
+        required: field.required,
+        valueAsNumber: true,
+        min: {
+          value: field.min ?? 0,  // ✅ Default min value (0) if not provided
+          message: `Value must be at least ${field.min ?? 0}`,
+        },
+        validate: (value) => !isNaN(value) || "Invalid number",
+      })}
+      defaultValue={field.default}
+      placeholder={field.placeholder}
+      type="number"
+      InputLabelProps={{ shrink: true }}
+      inputProps={{ min: field.min ?? 0 }} // ✅ Ensures UI prevents values below min
+      helperText={errors[field.name]?.message}
+    />
   ) : // In your CommonInputComponent.js
     field.type === "select" ? (
       <Autocomplete

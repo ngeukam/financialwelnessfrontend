@@ -56,7 +56,7 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                 callApi({ url: `datamanagement/files/${selectedFile.id}/stats/` }),
                 callApi({ url: `datamanagement/files/${selectedFile.id}/sample/` })
             ]);
-            setStats(statsResponse.data);
+            setStats(statsResponse.data.analysis);
             setSampleData(sampleResponse.data);
         };
 
@@ -216,7 +216,7 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                                             <Card variant="outlined">
                                                 <CardContent>
                                                     <Box display="flex" alignItems="center" mb={1}>
-                                                        {column.type === 'number' ? <NumericIcon color="primary" /> :
+                                                        {(column.type === 'int64' || column.type === 'float64') ? <NumericIcon color="primary" /> :
                                                             column.type === 'string' ? <TextIcon color="secondary" /> :
                                                                 column.type === 'date' ? <DateIcon color="action" /> :
                                                                     <CategoryIcon color="disabled" />}
@@ -233,19 +233,23 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                                                             <strong>Unique:</strong> {column.unique_values}
                                                         </Typography>
                                                         <Typography variant="body2" color="text.secondary">
-                                                            <strong>Missing:</strong> {column.null_count} (
-                                                            {((column.null_count / stats.record_count) * 100).toFixed(1)}%)
+                                                            <strong>Missing:</strong>
+                                                            {column.empty_values} (
+                                                            {column.empty_values > 0 ? (100 - (column.empty_values / stats.record_count)).toFixed(1) : (column.empty_values / stats.record_count).toFixed(1)}%)
                                                         </Typography>
-                                                        {column.type === 'number' && (
+                                                        {(column.type === 'int64' || column.type === 'float64') && (
                                                             <>
                                                                 <Typography variant="body2" color="text.secondary">
-                                                                    <strong>Min:</strong> {column.min}
+                                                                    <strong>Min:</strong> {column.min?.toLocaleString('fr-FR')}
                                                                 </Typography>
                                                                 <Typography variant="body2" color="text.secondary">
-                                                                    <strong>Max:</strong> {column.max}
+                                                                    <strong>Max:</strong> {column.max?.toLocaleString('fr-FR')}
                                                                 </Typography>
                                                                 <Typography variant="body2" color="text.secondary">
-                                                                    <strong>Avg:</strong> {column.mean?.toFixed(2)}
+                                                                    <strong>Avg:</strong> {column.mean?.toLocaleString('fr-FR')}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    <strong>Distribution:</strong> {column.distribution}
                                                                 </Typography>
                                                             </>
                                                         )}
@@ -269,28 +273,13 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                         </Typography> */}
 
                         <Divider sx={{ mb: 2 }} />
-                        {sampleData.file?.file_type === 'pdf' ? (
-                            // PDF Text Display
-                            <Paper
-                                sx={{
-                                    p: 3,
-                                    bgcolor: theme.palette.grey[100],
-                                    maxHeight: 500,
-                                    overflow: 'auto',
-                                    whiteSpace: 'pre-wrap',
-                                    fontFamily: 'monospace',
-                                    color:'#000000'
-                                }}
-                            >
-                                {sampleData.text_sample || 'No text extracted from PDF'}
-                            </Paper>
-                        ) : sampleData.sample_data?.length > 0 ? (
+                        {sampleData.sample_data.tables?.length > 0 ? (
                             < Box sx={{ height: 500 }}>
                                 <DataGrid
-                                    rows={sampleData.sample_data.map((row, index) => ({ ...row, id: index }))}
-                                    columns={Object.keys(sampleData.sample_data[0] || {}).map(key => ({
-                                        field: key,
-                                        headerName: key,
+                                    rows={sampleData.sample_data.tables[0].sample_rows.map((row, index) => ({ ...row, id: index }))}
+                                    columns={(Array.isArray(sampleData.sample_data.tables[0].headers || {}) ? (sampleData.sample_data.tables[0].headers) : Object.keys(sampleData.sample_data.tables[0].headers)).map((col) => ({
+                                        field: col,
+                                        headerName: col,
                                         width: 150,
                                         renderCell: (params) => (
                                             <Typography variant="body2" noWrap>
@@ -305,9 +294,7 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                             </Box>
                         ) : (
                             <Alert severity="info">
-                                {sampleData.file?.file_type === 'pdf'
-                                    ? 'No text content available'
-                                    : 'No sample data available'}
+                                No sample data available
                             </Alert>
                         )}
 
@@ -339,8 +326,8 @@ const FileOverview = ({ selectedFile, onRefresh }) => {
                                                 </Avatar>
                                             </ListItemAvatar>
                                             <ListItemText
-                                                primary={issue.title}
-                                                secondary={issue.description}
+                                                primary={issue.type}
+                                                secondary={issue.message}
                                                 secondaryTypographyProps={{ color: 'text.secondary' }}
                                             />
                                         </ListItem>
