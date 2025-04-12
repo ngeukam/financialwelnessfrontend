@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useState } from 'react';
-import { Box, Tabs, Tab, useTheme, useMediaQuery, Typography, Button } from '@mui/material';
+import { Box, Tabs, Tab, useTheme, useMediaQuery, Typography, Button, Breadcrumbs } from '@mui/material';
 import { css } from '@emotion/react';
 
 import DataOverview from '../../components/DataOverview';
@@ -12,7 +12,7 @@ import { Cancel, Upload } from '@mui/icons-material'
 import useApi from '../../hooks/APIHandler';
 import { toast } from 'react-toastify';
 import DataVisualisation from '../../components/DataVisualisation';
-
+import { useNavigate } from 'react-router-dom';
 
 export const TabPanel = (props) => {
     const { children, value, index, ...other } = props;
@@ -52,9 +52,9 @@ const ManageData = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [value, setValue] = useState(0);
     const [fileHistoryId, setfileHistoryId] = useState(null);
-
     const methods = useForm();
     const { control } = methods;
+    const navigate = useNavigate();
 
     const handleChange = (event, newValue) => {
         setValue(newValue);
@@ -62,11 +62,11 @@ const ManageData = () => {
 
     // const parseRowIndices = (input) => {
     //     if (!input) return null;
-        
+
     //     try {
     //         const parts = input.split(',').map(part => part.trim());
     //         let indices = [];
-            
+
     //         for (const part of parts) {
     //             if (part.includes('-')) {
     //                 const [start, end] = part.split('-').map(Number);
@@ -75,7 +75,7 @@ const ManageData = () => {
     //                 indices.push(Number(part));
     //             }
     //         }
-            
+
     //         return indices.filter(index => !isNaN(index) && index > 0);
     //     } catch (e) {
     //         console.error("Error parsing row indices:", e);
@@ -84,7 +84,7 @@ const ManageData = () => {
     // };
 
     const parseColName = (columnNames) => {
-        
+
         try {
             let columns = Array.isArray(columnNames) ? columnNames : [columnNames];
             return columns;
@@ -110,17 +110,17 @@ const ManageData = () => {
         if (columnsToRemove && columnsToRemove.length > 0) {
             formData.append('columns_to_remove', columnsToRemove.join(','));
         }
-        
+
         // Handle column removal
         // if (data.columnsToRemove) {
         //     formData.append('columns_to_remove', data.columnsToRemove);
         // }
-        
+
         // Handle empty values threshold
         if (data.minEmptyValues) {
             formData.append('min_empty_values', data.minEmptyValues);
         }
-    
+
         // Ajoutez les options de traitement comme champs séparés
         // formData.append('delete_duplicate', data.delete_duplicate);
         // formData.append('merge_existing', data.merge_existing);
@@ -140,29 +140,36 @@ const ManageData = () => {
         methods.handleSubmit(onSubmit)();
     }
     return (
-        <Box
-            sx={{
-                flexGrow: 1,
-                bgcolor: 'background.paper',
-                display: 'flex',
-                height: '100%',
-                flexDirection: 'column',
-            }}
-        >
+        <div>
+            <Box  display={'flex'} justifyContent={"space-between"} mb={3}>
+                <Breadcrumbs>
+                    <Typography variant="body2" onClick={() => navigate('/')}>Home</Typography>
+                    <Typography variant="body2" onClick={() => navigate('/manage/data')}>Data Management</Typography>
+                </Breadcrumbs>
+            </Box>
             <Box
                 sx={{
-                    borderBottom: 1,
-                    borderColor: 'divider',
-                    width: '100%',
+                    flexGrow: 1,
+                    bgcolor: 'background.paper',
+                    display: 'flex',
+                    height: '100%',
+                    flexDirection: 'column',
                 }}
             >
-                <Tabs
-                    value={value}
-                    onChange={handleChange}
-                    variant={isMobile ? 'scrollable' : 'standard'}
-                    scrollButtons={isMobile ? 'auto' : false}
-                    aria-label="Main tabs"
-                    css={css`
+                <Box
+                    sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        width: '100%',
+                    }}
+                >
+                    <Tabs
+                        value={value}
+                        onChange={handleChange}
+                        variant={isMobile ? 'scrollable' : 'standard'}
+                        scrollButtons={isMobile ? 'auto' : false}
+                        aria-label="Main tabs"
+                        css={css`
                     .MuiTab-root {
                     text-transform: none;
                     font-weight: ${theme.typography.fontWeightMedium};
@@ -189,83 +196,84 @@ const ManageData = () => {
                     );
                     }
                 `}
+                    >
+                        <Tab label="Data Overview" {...a11yProps(0)} />
+                        <Tab label="Import History" {...a11yProps(1)} />
+                        <Tab label="Data Upload" {...a11yProps(2)} />
+                        <Tab label="Data Visualisation" {...a11yProps(3)} />
+                    </Tabs>
+                </Box>
+
+                <Box
+                    sx={{
+                        flex: 1,
+                        overflow: 'auto',
+                        width: '100%',
+                    }}
                 >
-                    <Tab label="Data Overview" {...a11yProps(0)} />
-                    <Tab label="Import History" {...a11yProps(1)} />
-                    <Tab label="Data Upload" {...a11yProps(2)} />
-                    <Tab label="Data Visualisation" {...a11yProps(3)} />
-                </Tabs>
-            </Box>
+                    <TabPanel value={value} index={0}>
+                        <DataOverview file_history_id={fileHistoryId?.id} />
+                    </TabPanel>
+                    <TabPanel value={value} index={1}>
+                        <ImportHistory setValue={setValue} setfileHistoryId={setfileHistoryId} />
+                    </TabPanel>
+                    <FormProvider {...methods}>
+                        <form>
+                            <TabPanel value={value} index={2}>
+                                <Box sx={{ p: 3 }}>
+                                    <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+                                        Data Upload
+                                    </Typography>
+                                    <FileInputWithDragDrop
+                                        field={{
+                                            name: 'dataFiles',
+                                            required: true,
+                                            multiple: true,
+                                            // maxFiles: 5,
+                                            maxFiles: 1,
+                                            maxSize: 5 * 1024 * 1024, // 5MB
+                                            description: 'Drag and drop files or click to browse (max 1 file)'
+                                        }}
+                                        control={control}
+                                    />
+                                </Box>
+                                <ProcessingOptions />
+                                <Box justifyContent={"space-between"} display={"flex"} sx={{ mt: 1 }}>
+                                    <Button
+                                        variant="contained"
+                                        sx={{ m: 2 }}
+                                        startIcon={<Cancel />}
+                                        color="primary"
+                                        type="button"
+                                        onClick={() => methods.reset()}
+                                        fullWidth
+                                        disabled={loading}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        sx={{ m: 2 }}
+                                        type="button"
+                                        startIcon={<Upload />}
+                                        color="primary"
+                                        fullWidth
+                                        disabled={loading}
+                                        onClick={(e) => UploadData(e)}
+                                    >
+                                        {loading ? 'Processing...' : 'Upload & Process'}
+                                    </Button>
+                                </Box>
 
-            <Box
-                sx={{
-                    flex: 1,
-                    overflow: 'auto',
-                    width: '100%',
-                }}
-            >
-                <TabPanel value={value} index={0}>
-                    <DataOverview file_history_id={fileHistoryId?.id}/>
-                </TabPanel>
-                <TabPanel value={value} index={1}>
-                    <ImportHistory setValue={setValue} setfileHistoryId={setfileHistoryId} />
-                </TabPanel>
-                <FormProvider {...methods}>
-                    <form>
-                        <TabPanel value={value} index={2}>
-                            <Box sx={{ p: 3 }}>
-                                <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-                                    Data Upload
-                                </Typography>
-                                <FileInputWithDragDrop
-                                    field={{
-                                        name: 'dataFiles',
-                                        required: true,
-                                        multiple: true,
-                                        // maxFiles: 5,
-                                        maxFiles:1,
-                                        maxSize: 5 * 1024 * 1024, // 5MB
-                                        description: 'Drag and drop files or click to browse (max 1 file)'
-                                    }}
-                                    control={control}
-                                />
-                            </Box>
-                            <ProcessingOptions />
-                            <Box justifyContent={"space-between"} display={"flex"} sx={{ mt: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    sx={{ m: 2 }}
-                                    startIcon={<Cancel />}
-                                    color="primary"
-                                    type="button"
-                                    onClick={() => methods.reset()}
-                                    fullWidth
-                                    disabled={loading}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="contained"
-                                    sx={{ m: 2 }}
-                                    type="button"
-                                    startIcon={<Upload />}
-                                    color="primary"
-                                    fullWidth
-                                    disabled={loading}
-                                    onClick={(e) => UploadData(e)}
-                                >
-                                    {loading ? 'Processing...' : 'Upload & Process'}
-                                </Button>
-                            </Box>
-
-                        </TabPanel>
-                    </form>
-                </FormProvider>
-                <TabPanel value={value} index={3}>
-                    <DataVisualisation />
-                </TabPanel>
+                            </TabPanel>
+                        </form>
+                    </FormProvider>
+                    <TabPanel value={value} index={3}>
+                        <DataVisualisation />
+                    </TabPanel>
+                </Box>
             </Box>
-        </Box>
+        </div>
     );
 };
 

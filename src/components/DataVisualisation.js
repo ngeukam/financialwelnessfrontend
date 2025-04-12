@@ -18,6 +18,9 @@ import { BarChart } from '@mui/x-charts/BarChart';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { DataGrid } from '@mui/x-data-grid';
 import { useTheme } from '@mui/material/styles';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import { CloudDownload as DownloadIcon } from '@mui/icons-material'
 
 const DataVisualisation = () => {
   const [files, setFiles] = useState([]);
@@ -68,7 +71,7 @@ const DataVisualisation = () => {
       parameters: [
         { name: 'date_column', type: 'column', required: true },
         { name: 'value_column', type: 'column', required: true },
-        { name: 'frequency', type: 'select', options: ['D', 'W', 'M', 'Q', 'Y'], default: 'D' },
+        { name: 'frequency', type: 'select', options: ['D', 'W', 'ME', 'Q', 'Y'], default: 'D' },
         { name: 'agg_function', type: 'select', options: ['sum', 'mean', 'median', 'min', 'max'], default: 'sum' }
       ],
       description: 'Analyze trends and patterns over time'
@@ -147,15 +150,75 @@ const DataVisualisation = () => {
           parameters
         }
       });
-      console.log('response', response)
       setAnalysisResult(response.data?.analysis);
     } catch (error) {
     } finally {
       setLoading(false);
     }
   };
+  // Add this function to your component
+  // const downloadPDF = async () => {
+  //   // Get the tab content element
+  //   const element = document.getElementById('tab-content');
+
+  //   // Use html2canvas to capture the content
+  //   const canvas = await html2canvas(element, {
+  //     scale: 2, // Higher quality
+  //     useCORS: true, // For external resources
+  //     allowTaint: true,
+  //     scrollY: -window.scrollY // Fix for scrolling issues
+  //   });
+
+  //   // Create PDF
+  //   const pdf = new jsPDF('p', 'mm', 'a4');
+  //   const imgData = canvas.toDataURL('image/png');
+  //   const imgWidth = 210; // A4 width in mm
+  //   const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  //   pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  //   pdf.save(`${selectedFile.processing_option_display}_${'Visualisation'}.pdf`);
+  // };
 
   // Render parameter inputs
+
+  const downloadImage = async (format = 'png') => {
+    try {
+      // Get the tab content element
+      const element = document.getElementById('tab-content');
+      if (!element) return;
+      // Capture the element
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher quality
+        useCORS: true, // For external resources
+        allowTaint: true,
+        scrollY: -window.scrollY,
+        windowHeight: element.scrollHeight
+      });
+
+      // Reset DataGrid styles if modified
+      const gridElement = element.querySelector('.MuiDataGrid-root');
+      if (gridElement) {
+        gridElement.style.height = '500px';
+        gridElement.querySelector('.MuiDataGrid-virtualScroller')?.style.setProperty('overflow', 'auto');
+      }
+
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `${selectedFile.processing_option_display}_${['DataVisualisation']
+        }.${format}`;
+
+      if (format === 'png') {
+        link.href = canvas.toDataURL('image/png');
+      } else {
+        link.href = canvas.toDataURL('image/jpeg', 0.9); // 0.9 = JPEG quality
+      }
+
+      link.click();
+    } catch (error) {
+      console.error('Error generating image:', error);
+    };
+  };
+
   const renderParameterInput = (param) => {
     switch (param.type) {
       case 'column':
@@ -190,9 +253,78 @@ const DataVisualisation = () => {
               })}
               label={param.name}
             >
-              {columns.map((col) => (
-                <MenuItem key={col} value={col}>{col}</MenuItem>
-              ))}
+              {param.options ? (
+                param.options.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))
+              ) : (
+                columns.map((col) => (
+                  <MenuItem key={col} value={col}>{col}</MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+        );
+      case 'multi-select':
+        return (
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel>{param.name}</InputLabel>
+            <Select
+              multiple
+              value={parameters[param.name] || []}
+              onChange={(e) => setParameters({
+                ...parameters,
+                [param.name]: e.target.value
+              })}
+              label={param.name}
+            >
+              {param.options ? (
+                param.options.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))
+              ) : (
+                columns.map((col) => (
+                  <MenuItem key={col} value={col}>{col}</MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+        );
+
+      case 'select':
+        return (
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel>{param.name}</InputLabel>
+            <Select
+              value={parameters[param.name] || ''}
+              onChange={(e) => setParameters({
+                ...parameters,
+                [param.name]: e.target.value
+              })}
+              label={param.name}
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,  // Limit dropdown height
+                  },
+                }
+              }}
+            >
+              {param.options ? (
+                param.options.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))
+              ) : (
+                columns.map((col) => (
+                  <MenuItem key={col} value={col}>{col}</MenuItem>
+                ))
+              )}
             </Select>
           </FormControl>
         );
@@ -217,7 +349,6 @@ const DataVisualisation = () => {
         return null;
     }
   };
-
   // Render analysis results
   const renderAnalysisResult = () => {
     if (!analysisResult) return null;
@@ -256,57 +387,66 @@ const DataVisualisation = () => {
           </Box>
 
           {/* Conditional chart rendering */}
-          <Box sx={{ height: 400, mt: 1 }}>
-            {chartType === 'bar' ? (
-              <BarChart
-                dataset={data}
-                xAxis={[{
-                  scaleType: 'band',
-                  dataKey: 'value',
-                  label: result.column,
-                  tickLabelStyle: {
-                    angle: 45,
-                    textAnchor: 'start',
-                    fontSize: 12
-                  }
-                }]}
-                series={[{
-                  dataKey: 'count',
-                  label: 'Count',
-                  color: theme.palette.primary.main
-                }]}
-                layout="vertical"
-                margin={{ left: 100 }}
-              />
-            ) : (
-              <PieChart
-                series={[{
-                  data: data.map(item => ({
-                    id: item.id,
-                    value: item.count,
-                    label: item.value
-                  })),
-                  innerRadius: 30,
-                  outerRadius: 100,
-                  paddingAngle: 5,
-                  cornerRadius: 5,
-                  highlightScope: { faded: 'global', highlighted: 'item' },
-                  faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
-                  // hideLegend: true 
-                }]}
-                slotProps={{
-                  legend: {
-                    hidden: true,  // Alternative way to hide the legend
-                  },
-                }}
-                width={600}
-                height={300}
-              />
-            )}
-          </Box>
+          <div id="tab-content">
+            <Box sx={{ height: 400, mt: 1 }}>
+              {chartType === 'bar' ? (
+                <BarChart
+                  dataset={data}
+                  yAxis={[{
+                    scaleType: 'band',
+                    dataKey: 'value',
+                    label: result.column,
+                    tickLabelStyle: {
+                      angle: 0,
+                      textAnchor: 'start',
+                      fontSize: 12
+                    }
+                  }]}
+                  series={[{
+                    dataKey: 'count',
+                    label: 'Count',
+                    color: theme.palette.primary.main
+                  }]}
+                  layout="horizontal"
+                  margin={{ left: 100 }}
+                />
+              ) : (
+                <PieChart
+                  series={[{
+                    data: data.map(item => ({
+                      id: item.id,
+                      value: item.count,
+                      label: `${item.value} (${((item.count / data.reduce((total, curr) => total + curr.count, 0)) * 100).toFixed(1)}%)`
+                    })),
+                    innerRadius: 30,
+                    outerRadius: 100,
+                    paddingAngle: 5,
+                    cornerRadius: 5,
+                    highlightScope: { faded: 'global', highlighted: 'item' },
+                    faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                  }]}
+                  slotProps={{
+                    legend: {
+                      hidden: false,
+                      direction: 'row', // Horizontal legend
+                      position: { vertical: 'bottom', horizontal: 'middle' }, // Position below chart
+                      itemMarkWidth: 10, // Width of the color indicator
+                      itemMarkHeight: 10, // Height of the color indicator
+                      labelStyle: { fontSize: 12 }, // Legend text style
+                      markGap: 5, // Gap between mark and label
+                      itemGap: 20, // Gap between legend items
+                      padding: { top: 20 }, // Add space above legend
+                    },
+                  }}
+                  margin={{ top: 0, bottom: 80, left: 0, right: 0 }} // Add bottom margin for legend
+                  width={600}
+                  height={300}
+                />)}
+            </Box>
+          </div>
 
           {/* Raw data table (unchanged) */}
-          <Box sx={{ mt: 4 }}>
+          <Box sx={{ mt: 1 }}>
             <Typography variant="h6" gutterBottom>Raw Data</Typography>
             <DataGrid
               rows={data}
@@ -342,12 +482,15 @@ const DataVisualisation = () => {
 
     if (result.plot) {
       return (
+
         <Box sx={{ mt: 2 }}>
-          <img
-            src={`data:image/png;base64,${result.plot}`}
-            alt="Analysis result"
-            style={{ maxWidth: '100%' }}
-          />
+          <div id="tab-content">
+            <img
+              src={`data:image/png;base64,${result.plot}`}
+              alt="Analysis result"
+              style={{ maxWidth: '100%' }}
+            />
+          </div>
           <pre style={{ overflowX: 'auto', padding: '1rem' }}>
             {JSON.stringify(result, null, 2)}
           </pre>
@@ -356,9 +499,11 @@ const DataVisualisation = () => {
     }
 
     return (
-      <pre style={{ overflowX: 'auto', padding: '1rem' }}>
-        {JSON.stringify(result, null, 2)}
-      </pre>
+      <div id="tab-content">
+        <pre style={{ overflowX: 'auto', padding: '1rem' }}>
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      </div>
     );
   };
 
@@ -439,9 +584,21 @@ const DataVisualisation = () => {
 
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2, minHeight: '60vh' }}>
-            <Typography variant="h6" gutterBottom>
-              Analysis Results
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" gutterBottom>
+                Analysis Results
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => downloadImage('png')}
+                sx={{ mr: 1 }}
+              >
+                Download
+              </Button>
+            </Box>
+
+
             {!selectedFile ? (
               <Typography color="text.secondary">
                 Please select a file to analyze

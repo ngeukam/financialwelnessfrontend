@@ -10,7 +10,7 @@ import JsonInputComponent from "./JsonInputComponent";
 import { useFormContext } from "react-hook-form";
 import { useEffect } from "react";
 
-const CommonInputComponent = ({ field, sx }) => {
+const CommonInputComponent = ({ field, sx, isReadOnly }) => {
   const {
     register,
     formState: { errors },
@@ -144,6 +144,7 @@ const CommonInputComponent = ({ field, sx }) => {
   ) : // In your CommonInputComponent.js
     field.type === "select" ? (
       <Autocomplete
+        disabled={isReadOnly}
         sx={{ mt: 2, ...sx }}
         options={field.options}
         getOptionLabel={(option) => option.value || option.label || ''}
@@ -165,7 +166,7 @@ const CommonInputComponent = ({ field, sx }) => {
             label={field.label}
             variant="outlined"
             error={!!errors[field.name]}
-            helperText={errors[field.name]?.message || "This field is required"}
+            helperText={errors[field.name]?.message}
           />
         )}
       />

@@ -2,14 +2,10 @@
 import React, { useState } from 'react';
 import { Box, Tabs, Tab, useTheme, useMediaQuery, Typography } from '@mui/material';
 import { css } from '@emotion/react';
-
-import DataOverview from '../components/DataOverview';
-import ImportHistory from '../components/ImportHistory';
-// import DataUpload from '../components/DataUpload';
-import DataSources from '../components/DataSources';
-import FileInputWithDragDrop from '../components/FileInputWithDragDrop';
-import { FormProvider, useForm } from 'react-hook-form';
-import ProcessingOptions from '../components/ProcessingOptions';
+import Goals from '../components/Goals';
+import ExpenseDashboard from '../components/Expenses';
+import IncomeDashboard from '../components/Incomes';
+import PersonalFinanceOverview from '../components/PFOverview';
 
 export const TabPanel = (props) => {
     const { children, value, index, ...other } = props;
@@ -43,12 +39,11 @@ const a11yProps = (index) => {
     };
 };
 
-const MainTabs = () => {
+const PFTabs = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [value, setValue] = useState(0);
-    const methods = useForm();
-    
+
 
     const handleChange = (event, newValue) => {
         setValue(newValue);
@@ -105,10 +100,11 @@ const MainTabs = () => {
             }
           `}
                 >
-                    <Tab label="Data Overview" {...a11yProps(0)} />
-                    <Tab label="Import History" {...a11yProps(1)} />
-                    <Tab label="Data Upload" {...a11yProps(2)} />
-                    <Tab label="Data Visualisation" {...a11yProps(3)} />
+                    <Tab label="Overview" {...a11yProps(0)} />
+                    <Tab label="Incomes" {...a11yProps(1)} />
+                    <Tab label="Expenses" {...a11yProps(2)} />
+                    <Tab label="Goals" {...a11yProps(3)} />
+
                 </Tabs>
             </Box>
 
@@ -120,35 +116,20 @@ const MainTabs = () => {
                 }}
             >
                 <TabPanel value={value} index={0}>
-                    <DataOverview />
+                    <PersonalFinanceOverview />
                 </TabPanel>
                 <TabPanel value={value} index={1}>
-                    <ImportHistory />
+                    <IncomeDashboard />
                 </TabPanel>
-                <FormProvider {...methods}>
-                      <TabPanel value={value} index={2}>
-                        <Box sx={{ p: 3 }}>
-                          <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-                            Data Upload
-                          </Typography>
-                          <FileInputWithDragDrop 
-                            field={{
-                              name: 'dataFiles',
-                              label: 'Upload your data files',
-                              required: true,
-                              description: 'Drag and drop files or click to browse'
-                            }} 
-                          />
-                        </Box>
-                        <ProcessingOptions/>
-                      </TabPanel>
-                    </FormProvider>
+                <TabPanel value={value} index={2}>
+                    <ExpenseDashboard />
+                </TabPanel>
                 <TabPanel value={value} index={3}>
-                    <DataSources />
+                    <Goals />
                 </TabPanel>
             </Box>
         </Box>
     );
 };
 
-export default MainTabs;
+export default PFTabs;

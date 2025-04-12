@@ -31,6 +31,7 @@ const DataOverview = ({file_history_id}) => {
   }, []);
 
   const handleRefresh = () => {
+    file_history_id = "";
     fetchFiles();
   };
 

@@ -3,7 +3,6 @@ import {useEffect,useState} from 'react';
 import useApi from '../hooks/APIHandler';
 import { Container, Divider, LinearProgress, Typography } from '@mui/material';
 import { Stepper, Step, StepLabel } from '@mui/material';
-import { ArrowBack, ArrowOutward, CurrencyExchange } from '@mui/icons-material';
 import { Button,Box } from '@mui/material';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -75,6 +74,15 @@ const DynamicForm=({formNameVar,idVar,onSaveEvent})=>{
             methods.reset();
             if(onSaveEvent){
                 onSaveEvent();
+            }
+            else if(formName === "income" || formName === "expense" ){
+                navigate(`/pf/wallet`)
+            }
+            else if(formName === "category"){
+                navigate(`/pf/manage/category`)
+            }
+            else if(formName === "goal"){
+                navigate(`/pf/manage/finance`)
             }
             else{
                 navigate(`/manage/${formName}`)

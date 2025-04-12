@@ -1,10 +1,10 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import CommonInputComponent from './CommonInputComponent';
-import { useFormContext } from 'react-hook-form';
+import { format } from 'date-fns';
+
 
 const ProcessingOptions = () => {
-  const { control } = useFormContext();
 
   return (
     <Box sx={{ mt: 1, p: 3, borderTop: 1, borderColor: 'divider' }}>
@@ -57,7 +57,7 @@ const ProcessingOptions = () => {
               label: "Minimum empty values to delete row",
               required: false,
               min: 0,
-              defaultValue: 0,
+              default: 0,
               helperText: "Rows with more empty values than this will be deleted",
               placeholder:"0 if you don't want to delete None value on row"
             }}
@@ -78,7 +78,8 @@ const ProcessingOptions = () => {
               name: "date_format",
               label: "Date format",
               isDate: true,
-              required: true
+              required: true,
+              default: format(new Date(), 'yyyy-MM-dd') 
             }}
           />
           <CommonInputComponent

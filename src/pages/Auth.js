@@ -80,7 +80,7 @@ const Auth = () => {
     }
 
     const endpoint = isLogin ? "auth/login/" : "auth/signup/";
-    const successMessage = isLogin ? "Connexion réussie" : "Inscription réussie";
+    const successMessage = isLogin ? "Login successfully!" : "Signup successfully!";
 
     const response = await callApi({ 
       url: endpoint, 
@@ -94,7 +94,7 @@ const Auth = () => {
       dispatch(login());
       navigate("/home");
     } else {
-      toast.error(isLogin ? "Identifiants invalides" : "Échec de l'inscription");
+      toast.error(isLogin ? "Invalid credentials" : "Signup failed");
     }
   };
 

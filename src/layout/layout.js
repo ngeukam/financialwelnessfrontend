@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
-import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, DataUsage, DataObjectSharp } from '@mui/icons-material';
+import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, DataUsage, DataObjectSharp, Wallet, Money, DataArray, FileDownload, FileOpenRounded, Person, MoneyOff, MoneySharp, AttachMoney } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
 import { orangeDarkTheme, orangeLightTheme, basicTheme, darkTheme, lightTheme, customTheme, blueLightTheme, blueDarkTheme, greenLightTheme, greenDarkTheme, redLightTheme, redDarkTheme } from './themes';
@@ -22,7 +22,6 @@ const Layout = ({ sidebarList, pageTitle, childPage }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  console.log(sidebarItems);
 
   useEffect(() => {
     dispatch(triggerPageChange(location))
@@ -156,11 +155,21 @@ const Layout = ({ sidebarList, pageTitle, childPage }) => {
         return <AccountCircle />;
       case 'results':
         return <AccountCircle />;
+      case 'Wallet':
+        return <Wallet />;
+      case 'Money':
+        return <AttachMoney />;
+      case 'Finance':
+          return <Money />;
+      case 'File':
+        return <FileOpenRounded />;
+      case 'Personal':
+        return <Person />;
       case 'attendance':
         return <AccountCircle />;
       case 'ecommerce':
         return <BusinessIcon />;
-      case 'DataManagement':
+      case 'Warehouse':
         return <WarehouseOutlined />;
       default:
         return <AccountCircle />;
