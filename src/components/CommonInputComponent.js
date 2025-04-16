@@ -10,7 +10,7 @@ import JsonInputComponent from "./JsonInputComponent";
 import { useFormContext } from "react-hook-form";
 import { useEffect } from "react";
 
-const CommonInputComponent = ({ field, sx, isReadOnly }) => {
+const CommonInputComponent = ({ field, sx }) => {
   const {
     register,
     formState: { errors },
@@ -114,6 +114,13 @@ const CommonInputComponent = ({ field, sx, isReadOnly }) => {
         {...register(field.name, { required: field.required })}
         defaultValue={field.default}
         placeholder={field.placeholder}
+        InputProps={{
+          readOnly: field.disabled,  // Use readOnly instead of disabled for form submission
+          style: field.disabled ? { 
+            backgroundColor: 'rgba(0, 0, 0, 0.06)', 
+            cursor: 'not-allowed' 
+          } : {}
+        }}
       />
     )
   ) : field.type === "number" ? (  // ✅ Added Number Handling
@@ -144,7 +151,6 @@ const CommonInputComponent = ({ field, sx, isReadOnly }) => {
   ) : // In your CommonInputComponent.js
     field.type === "select" ? (
       <Autocomplete
-        disabled={isReadOnly}
         sx={{ mt: 2, ...sx }}
         options={field.options}
         getOptionLabel={(option) => option.value || option.label || ''}

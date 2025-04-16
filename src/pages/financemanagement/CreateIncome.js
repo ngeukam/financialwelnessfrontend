@@ -7,22 +7,22 @@ import { getFormType } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import { toast } from 'react-toastify';
 
-const CreateGoal = () => {
+const CreateIncome = () => {
     // Hooks and state initialization
     const methods = useForm();
     const { error, loading, callApi } = useApi();
     const { id } = useParams();
     const navigate = useNavigate();
-    const [goalFields, setGoalFields] = useState([]);
-    const fieldType = getFormType();
+    const [incomeFields, setIncomeFields] = useState([]);
+    const fieldType = getFormType(); // Moved outside state since it's static
 
     // Memoized function to fetch form fields
     const getFormFields = useCallback(async () => {
-        const endpoint = id ? `personalfinance/goal/${id}/` : 'personalfinance/goal/';
+        const endpoint = id ? `personalfinance/income/${id}/` : 'personalfinance/income/';
         const response = await callApi({ url: endpoint });
 
         if (response?.status === 200) {
-            setGoalFields(response.data.data.goalFields);
+            setIncomeFields(response.data.data.incomeFields);
         }
     }, [id, callApi]);
 
@@ -33,7 +33,7 @@ const CreateGoal = () => {
 
     // Form submission handler
     const onSubmit = useCallback(async (data) => {
-        const endpoint = id ? `personalfinance/goal/${id}/` : 'personalfinance/goal/';
+        const endpoint = id ? `personalfinance/income/${id}/` : 'personalfinance/income/';
         const response = await callApi({
             url: endpoint,
             method: 'POST',
@@ -72,6 +72,14 @@ const CreateGoal = () => {
         }
     }, [methods, navigate, onSubmit]);
 
+    // Set default date for date_of_received field
+    // useEffect(() => {
+    //     if (incomeFields.length > 0) {
+    //         methods.setValue("date_of_received", new Date().toISOString().split('T')[0]);
+    //     }
+    // }, [methods, incomeFields]);
+
+    // Early return if loading
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error loading form</div>;
 
@@ -84,19 +92,18 @@ const CreateGoal = () => {
                         <Breadcrumbs aria-label="breadcrumb">
                             <Typography variant="body2">Home</Typography>
                             <Typography variant="body2">Personal Finance</Typography>
-                            {/* <Typography variant="body2">Goals</Typography> */}
-                            <Typography variant="body2">{id ? "Edit" : "Create"} Goal</Typography>
+                            <Typography variant="body2">{id ? "Edit" : "Create"} Income</Typography>
                         </Breadcrumbs>
                     </Box>
 
                     <Typography variant="h6" mt={2} gutterBottom>
-                        Goal Details
+                        Income Details
                     </Typography>
 
                     {/* Form Fields */}
                     <Grid container spacing={3}>
                         {fieldType?.map((field) =>
-                            goalFields?.[field]?.map((field1) => (
+                            incomeFields?.[field]?.map((field1) => (
                                 <Grid
                                     item
                                     xs={12}
@@ -106,13 +113,8 @@ const CreateGoal = () => {
                                     <CommonInputComponent
                                         field={{
                                             ...field1,
-                                            default: field1.name === "begin_date" ? new Date().toISOString().split('T')[0] :
-                                                field1.name === "end_date" ? new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0] :
-                                                    field1.default,
-                                            label: field1.name === "description" ? "Title of goal" : field1.label,
-                                            placeholder: field1.name === "description"
-                                                ? "Give a title to your goal..." : field1.name === "percentage" ? "Example enter 10 for 10%"
-                                                    : field1.placeholder
+                                            default: field1.name === "date_of_received" ? new Date().toISOString().split('T')[0] : field1.default,
+                                            // disabled: id && field1.name === "amount"
                                         }}
                                     />
                                 </Grid>
@@ -135,7 +137,7 @@ const CreateGoal = () => {
                                 color="primary"
                                 onClick={(e) => handleAction(e, "PASS")}
                             >
-                                Save Goal
+                                Save Income
                             </Button>
                             <Button
                                 variant="contained"
@@ -152,4 +154,4 @@ const CreateGoal = () => {
     );
 };
 
-export default React.memo(CreateGoal);
+export default React.memo(CreateIncome);

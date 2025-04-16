@@ -41,7 +41,7 @@ import {
     Pets
 } from '@mui/icons-material';
 import useApi from '../hooks/APIHandler';
-import { getCategoryListIcon, getUser } from '../utils/Helper';
+import { capitalizeFirstLetter, getCategoryListIcon, getUser } from '../utils/Helper';
 import { formatDate } from '../utils/Helper';
 
 const PersonalFinanceOverview = () => {
@@ -67,8 +67,6 @@ const PersonalFinanceOverview = () => {
     });
     const [recentTransactions, setRecentTransactions] = useState([]);
 
-    console.log('recentTransactions', recentTransactions)
-
     const getLatestTransactions = async () => {
         const result = await callApi({
             url: 'personalfinance/latest-transactions/', method: 'GET'
@@ -93,7 +91,6 @@ const PersonalFinanceOverview = () => {
             url: 'personalfinance/expenses-summary/', method: 'GET'
         })
         if (result) {
-            console.log('result', result)
             setExpenseSummary(result.data)
 
         }
@@ -492,44 +489,55 @@ const PersonalFinanceOverview = () => {
                 </Typography>
 
                 <List sx={{ '& .MuiListItem-root': { px: 0 } }}>
-                    {recentTransactions.map((transaction, index) => (
-                        <>
-                            <ListItem>
+                    {recentTransactions.map((transaction) => (
+                        <ListItem
+                            key={transaction.id} // Use a unique identifier from your transaction
+                            sx={{ flexDirection: 'column', alignItems: 'stretch', px: 0 }}
+                        >
+                            <Box sx={{ display: 'flex', width: '100%' }}>
                                 <Box sx={{
                                     width: 40,
                                     height: 40,
                                     borderRadius: '12px',
-                                    // backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                     backgroundColor: transaction.type === 'income' ? 'success.light' : 'error.light',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     mr: 2
                                 }}>
-                                    {/* <RestaurantIcon sx={{ color: '#ef4444' }} /> */}
-                                    {transaction.type === 'income' ? <AccountBalanceWalletIcon sx={{ color: '#FFFFFF' }} /> : getCategoryListIcon(transaction.category, 'white')}
-
+                                    {transaction.type === 'income'
+                                        ? <AccountBalanceWalletIcon sx={{ color: '#FFFFFF' }} />
+                                        : getCategoryListIcon(transaction.category, 'white')}
                                 </Box>
                                 <ListItemText
                                     primary={
-                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                            {transaction.description}
-                                        </Typography>
+                                        <Box sx={{ display: 'flex' }}>
+                                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                {capitalizeFirstLetter(transaction.description)}
+                                            </Typography>
+                                            {transaction.note && (
+                                                <Typography variant="body1" sx={{ fontWeight: 'normal', fontSize: '15px' }}>
+                                                    {": "}{capitalizeFirstLetter(transaction.note)}
+                                                </Typography>
+                                            )}
+                                        </Box>
                                     }
                                     secondary={
                                         <Typography variant="body2" color="text.secondary">
-                                            {`${formatDate(transaction.date)} • ${transaction.category ? transaction.category : 'Income'}`}
+                                            {`${formatDate(transaction.date)} • ${transaction.category || 'Income'}`}
                                         </Typography>
                                     }
                                 />
-                                <Typography variant="body1" sx={{ fontWeight: 600,  color: transaction.type === 'income' ? 'success.main' : 'error.main' }}>
+                                <Typography variant="body1" sx={{
+                                    fontWeight: 600,
+                                    color: transaction.type === 'income' ? 'success.main' : 'error.main'
+                                }}>
                                     {transaction.type === 'income' ? '+' : '-'}{getUser().currency}{transaction.amount.toLocaleString()}
                                 </Typography>
-                            </ListItem>
-                            <Divider component="li" sx={{ my: 1.5 }} />
-                        </>
+                            </Box>
+                            <Divider sx={{ my: 1.5 }} />
+                        </ListItem>
                     ))}
-
                 </List>
             </Paper>
         </Box>

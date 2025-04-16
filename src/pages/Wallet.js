@@ -27,7 +27,7 @@ import {
   ShowChart,
   PieChartRounded
 } from '@mui/icons-material';
-import { formatDate, getUser } from '../utils/Helper';
+import { capitalizeFirstLetter, formatDate, getUser } from '../utils/Helper';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import useApi from '../hooks/APIHandler';
@@ -42,7 +42,6 @@ const Wallet = () => {
   const navigate = useNavigate();
   const { error, loading, callApi } = useApi();
   const [chartData, setChartData] = useState(null);
-
   useEffect(() => {
     let timeoutId;
 
@@ -53,13 +52,12 @@ const Wallet = () => {
           callApi({ url: 'personalfinance/latest-transactions/' }),
           callApi({ url: 'personalfinance/financial-summary/' })
         ]);
-        console.log('transactionsRes', transactionsRes)
         setRecentTransactions(transactionsRes.data);
         setChartData(chartRes.data);
         setWalletBalance(summaryRes.data.total_balance);
         setTotalExpenses(summaryRes.data.total_expenses);
         setTotalIncome(summaryRes.data.total_income);
-      } catch (error) {
+      } catch (error) { 
         console.error('Error fetching financial data:', error);
         // Handle error state if needed
       }
@@ -74,7 +72,7 @@ const Wallet = () => {
     setTabValue(newValue);
   };
   const onAddIncomeClick = () => {
-    navigate('/form/income')
+    navigate('/pf/create/income')
   }
   const onAddExpenseClick = () => {
     navigate('/pf/create/expense')
@@ -279,7 +277,17 @@ const Wallet = () => {
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={transaction.description}
+                      primary={
+                        <div style={{ display: 'flex' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {capitalizeFirstLetter(transaction.description)}
+                          </Typography>
+                          {transaction.note && <Typography variant="body1" sx={{ fontWeight: 'normal', fontSize: '15px' }}>
+                            {": "}{capitalizeFirstLetter(transaction.note)}
+                          </Typography>}
+                        </div>
+
+                      }
                       secondary={`${formatDate(transaction.date)} • ${transaction.category ? transaction.category : 'Income'}`}
                     />
                     <Typography

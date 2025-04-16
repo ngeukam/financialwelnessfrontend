@@ -27,7 +27,7 @@ const DataVisualisation = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [operation, setOperation] = useState('describe');
+  const [operation, setOperation] = useState('value_counts');
   const [parameters, setParameters] = useState({});
   const { callApi } = useApi();
   const [chartType, setChartType] = useState('bar');
@@ -51,16 +51,16 @@ const DataVisualisation = () => {
 
   // Available operations with their parameters
   const operations = {
-    describe: {
-      name: 'Basic Statistics',
-      parameters: [],
-      description: 'Show descriptive statistics for all numeric columns'
-    },
-    correlation: {
-      name: 'Correlation Matrix',
-      parameters: [],
-      description: 'Calculate pairwise correlations between numeric columns'
-    },
+    // describe: {
+    //   name: 'Basic Statistics',
+    //   parameters: [],
+    //   description: 'Show descriptive statistics for all numeric columns'
+    // },
+    // correlation: {
+    //   name: 'Correlation Matrix',
+    //   parameters: [],
+    //   description: 'Calculate pairwise correlations between numeric columns'
+    // },
     value_counts: {
       name: 'Value Counts',
       parameters: [{ name: 'column', type: 'column' }],
@@ -76,23 +76,23 @@ const DataVisualisation = () => {
       ],
       description: 'Analyze trends and patterns over time'
     },
-    correlation_extreme: {
-      name: 'Extreme Correlations',
-      parameters: [
-        { name: 'threshold', type: 'number', default: 0.8, min: 0, max: 1, step: 0.05 },
-        { name: 'direction', type: 'select', options: ['positive', 'negative', 'both'], default: 'both' }
-      ],
-      description: 'Find strongly correlated feature pairs above threshold'
-    },
-    pattern_detect: {
-      name: 'Pattern Detection',
-      parameters: [
-        { name: 'target_column', type: 'column', required: true },
-        { name: 'pattern_type', type: 'select', options: ['seasonal', 'trend', 'outlier', 'change_point'], default: 'seasonal' },
-        { name: 'sensitivity', type: 'number', default: 0.7, min: 0, max: 1, step: 0.1 }
-      ],
-      description: 'Identify patterns and anomalies in data'
-    },
+    // correlation_extreme: {
+    //   name: 'Extreme Correlations',
+    //   parameters: [
+    //     { name: 'threshold', type: 'number', default: 0.8, min: 0, max: 1, step: 0.05 },
+    //     { name: 'direction', type: 'select', options: ['positive', 'negative', 'both'], default: 'both' }
+    //   ],
+    //   description: 'Find strongly correlated feature pairs above threshold'
+    // },
+    // pattern_detect: {
+    //   name: 'Pattern Detection',
+    //   parameters: [
+    //     { name: 'target_column', type: 'column', required: true },
+    //     { name: 'pattern_type', type: 'select', options: ['seasonal', 'trend', 'outlier', 'change_point'], default: 'seasonal' },
+    //     { name: 'sensitivity', type: 'number', default: 0.7, min: 0, max: 1, step: 0.1 }
+    //   ],
+    //   description: 'Identify patterns and anomalies in data'
+    // },
     nested_aggregate: {
       name: 'Nested Aggregation',
       parameters: [
@@ -106,30 +106,30 @@ const DataVisualisation = () => {
       ],
       description: 'Aggregate data by multiple grouping levels'
     },
-    linear_regression: {
-      name: 'Linear Regression',
-      parameters: [
-        { name: 'x_column', type: 'column' },
-        { name: 'y_column', type: 'column' }
-      ],
-      description: 'Perform simple linear regression analysis'
-    },
-    pca: {
-      name: 'PCA',
-      parameters: [
-        { name: 'n_components', type: 'number', default: 2 },
-        { name: 'features', type: 'multi-column' }
-      ],
-      description: 'Principal Component Analysis for dimensionality reduction'
-    },
-    cluster: {
-      name: 'Clustering',
-      parameters: [
-        { name: 'n_clusters', type: 'number', default: 3 },
-        { name: 'features', type: 'multi-column' }
-      ],
-      description: 'Group similar data points using clustering algorithms'
-    }
+    // linear_regression: {
+    //   name: 'Linear Regression',
+    //   parameters: [
+    //     { name: 'x_column', type: 'column' },
+    //     { name: 'y_column', type: 'column' }
+    //   ],
+    //   description: 'Perform simple linear regression analysis'
+    // },
+    // pca: {
+    //   name: 'PCA',
+    //   parameters: [
+    //     { name: 'n_components', type: 'number', default: 2 },
+    //     { name: 'features', type: 'multi-column' }
+    //   ],
+    //   description: 'Principal Component Analysis for dimensionality reduction'
+    // },
+    // cluster: {
+    //   name: 'Clustering',
+    //   parameters: [
+    //     { name: 'n_clusters', type: 'number', default: 3 },
+    //     { name: 'features', type: 'multi-column' }
+    //   ],
+    //   description: 'Group similar data points using clustering algorithms'
+    // }
   };
 
   // Get available columns from sample data (if available)

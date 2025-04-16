@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Grid, Card, CardContent, Paper, styled, LinearProgress, Typography, CardActions, MenuItem, Select, Pagination, Chip, CircularProgress, Tooltip } from "@mui/material";
-import { AddCircle, AttachMoney, CalendarToday,  ArrowUpward as ArrowUpwardIcon, ErrorOutline } from "@mui/icons-material";
+import { AddCircle, AttachMoney, CalendarToday, ArrowUpward as ArrowUpwardIcon, ErrorOutline, Speed } from "@mui/icons-material";
 import useApi from "../hooks/APIHandler";
-import { calculateTimeRemaining, getUser } from "../utils/Helper";
+import { calculateTimeRemaining, capitalizeFirstLetter, getUser } from "../utils/Helper";
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,6 +30,7 @@ const Goals = ({ theme }) => {
         pageSize: 6
     })
     const [totalItems, setTotalItems] = useState(0);
+    const [currentachieve, setCurrentAchieve] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [debounceSearch, setDebounceSearch] = useState("");
     const [ordering, setOrdering] = useState([{ field: 'id', sort: 'desc' }]);
@@ -38,6 +39,7 @@ const Goals = ({ theme }) => {
     const { error, loading, callApi } = useApi();
     const divImage = useRef();
     const navigate = useNavigate();
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebounceSearch(searchQuery);
@@ -54,7 +56,7 @@ const Goals = ({ theme }) => {
             order = ordering[0].sort === 'asc' ? ordering[0].field : '-' + ordering[0].field
         }
         const result = await callApi({
-            url: 'personalfinance/goals-list/', method: 'GET', params: {
+            url: 'personalfinance/goals/', method: 'GET', params: {
                 page: paginationModel.page + 1,
                 pageSize: paginationModel.pageSize,
                 search: debounceSearch,
@@ -63,6 +65,7 @@ const Goals = ({ theme }) => {
         })
         if (result) {
             setData(result.data.data.data);
+            setCurrentAchieve(result.data.current_month_achieved)
             setTotalItems(result.data.data.totalItems);
         }
     }
@@ -125,7 +128,7 @@ const Goals = ({ theme }) => {
                                             mb: 0.5
                                         }}
                                     >
-                                        TOTAL BUDGET
+                                        GOALS ACHIEVED
                                     </Typography>
                                     <Typography
                                         variant="h4"
@@ -143,7 +146,7 @@ const Goals = ({ theme }) => {
                                             color: 'white'
                                         }}
                                     >
-                                        {getUser().currency}{data[0]?.total_budget_current_month?.toLocaleString() || '0.00'}
+                                        {currentachieve}
                                     </Typography>
 
                                     {/* Chip with pulse animation */}
@@ -249,9 +252,6 @@ const Goals = ({ theme }) => {
                                     'LOW': 'info.main'
                                 }[goal.priority] || 'primary.main';
 
-                                // Calculate progress percentage
-                                const progress = Math.min((goal.total_expenses / goal.budget) * 100, 100);
-
                                 return (
                                     <Grid item xs={12} sm={6} md={4} key={goal.id}>
                                         <Card sx={{
@@ -290,6 +290,23 @@ const Goals = ({ theme }) => {
                                                         height: '24px'
                                                     }}
                                                 />
+                                                <Chip
+                                                    label={goal.closed === 'YES' ? 'CLOSE' : 'OPEN'}
+                                                    size="small"
+                                                    sx={{
+                                                        ml: 2,
+                                                        mb: 2,
+                                                        backgroundColor: goal.closed === 'YES' ? '#A9A9A9' : '#008B8B',
+                                                        color: 'white',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '0.75rem',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px',
+                                                        borderRadius: '4px',
+                                                        padding: '0 8px',
+                                                        height: '24px'
+                                                    }}
+                                                />
 
                                                 <Typography
                                                     gutterBottom
@@ -304,7 +321,7 @@ const Goals = ({ theme }) => {
                                                         lineHeight: '1.4'
                                                     }}
                                                 >
-                                                    {goal.description}
+                                                    {capitalizeFirstLetter(goal.description)}
                                                 </Typography>
 
                                                 <Box sx={{ mb: 2 }}>
@@ -334,7 +351,8 @@ const Goals = ({ theme }) => {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         color: '#4a5568',
-                                                        fontSize: '0.875rem'
+                                                        fontSize: '0.875rem',
+                                                        mb:1
                                                     }}>
                                                         <Box component="span" sx={{
                                                             fontWeight: '600',
@@ -346,11 +364,34 @@ const Goals = ({ theme }) => {
                                                             <CalendarToday sx={{ fontSize: '16px', mr: 0.5 }} />
                                                             Target Date:
                                                         </Box>
-                                                        <Box component="span" sx={{ fontWeight: '500' }}>
+                                                        <Box component="span" sx={{ fontWeight: '500', ml: 0.5 }}>
                                                             {new Date(goal.end_date)?.toLocaleDateString()}
                                                         </Box>
                                                     </Typography>
+
+                                                    <Typography variant="body2" sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        color: '#4a5568',
+                                                        fontSize: '0.875rem'
+                                                    }}>
+                                                        <Box component="span" sx={{
+                                                            fontWeight: '600',
+                                                            minWidth: '90px',
+                                                            color: '#2d3748',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center'
+                                                        }}>
+                                                            <Speed sx={{ fontSize: '16px', mr: 0.5 }} />
+                                                            Frequency:
+                                                        </Box>
+                                                        <Box component="span" sx={{ fontWeight: '500', ml: 0.5 }}>
+                                                            {goal.percentage}% • {goal.frequency}
+                                                        </Box>
+                                                    </Typography>
+
                                                 </Box>
+
 
                                                 {/* Progress Bar */}
                                                 <Box sx={{ mt: 3, mb: 2 }}>
@@ -362,9 +403,9 @@ const Goals = ({ theme }) => {
                                                                 fontSize: '0.875rem',
                                                                 mr: 1
                                                             }}>
-                                                                {Math.round(progress)}%
+                                                                {Math.round(goal.progression)}%
                                                             </Typography>
-                                                            {goal.total_expenses > goal.budget && (
+                                                            {goal.allocated_amount > goal.budget && (
                                                                 <Tooltip title="Budget exceeded" arrow>
                                                                     <ErrorOutline sx={{
                                                                         color: '#ef4444',
@@ -375,16 +416,16 @@ const Goals = ({ theme }) => {
                                                         </Box>
                                                         <Typography variant="body2" sx={{
                                                             fontWeight: '500',
-                                                            color: goal.total_expenses > goal.budget ? '#ef4444' : '#4a5568',
+                                                            color: goal.allocated_amount > goal.budget ? '#ef4444' : '#4a5568',
                                                             fontSize: '0.875rem',
                                                             display: 'flex',
                                                             alignItems: 'center'
                                                         }}>
-                                                            {getUser().currency}{goal.total_expenses?.toLocaleString()}
+                                                            {getUser().currency}{goal.allocated_amount?.toLocaleString()}
                                                             <span style={{ margin: '0 4px' }}>/</span>
                                                             {getUser().currency}{goal.budget?.toLocaleString()}
-                                                            {goal.total_expenses > goal.budget && (
-                                                                <Tooltip title={`Exceeded by ${getUser().currency}${(goal.total_expenses - goal.budget).toLocaleString()}`} arrow>
+                                                            {goal.allocated_amount > goal.budget && (
+                                                                <Tooltip title={`Exceeded by ${getUser().currency}${(goal.allocated_amount - goal.budget).toLocaleString()}`} arrow>
                                                                     <ArrowUpwardIcon sx={{
                                                                         color: '#ef4444',
                                                                         fontSize: '0.875rem',
@@ -396,17 +437,17 @@ const Goals = ({ theme }) => {
                                                     </Box>
                                                     <LinearProgress
                                                         variant="determinate"
-                                                        value={Math.min(progress, 100)}
+                                                        value={Math.min(goal.progression, 100)}
                                                         sx={{
                                                             height: '8px',
                                                             borderRadius: '8px',
                                                             backgroundColor: 'rgba(0, 0, 0, 0.05)',
                                                             '& .MuiLinearProgress-bar': {
                                                                 backgroundColor: goal.reached === 'YES' ? '#10b981' :
-                                                                    goal.total_expenses > goal.budget ? '#ef4444' : priorityColor,
+                                                                    goal.allocated_amount > goal.budget ? '#ef4444' : '#008B8B',
                                                                 borderRadius: '8px',
                                                                 boxShadow: goal.reached === 'YES' ? '0 2px 4px rgba(16, 185, 129, 0.3)' :
-                                                                    goal.total_expenses > goal.budget ? '0 2px 4px rgba(239, 68, 68, 0.3)' : 'none'
+                                                                    goal.allocated_amount > goal.budget ? '0 2px 4px rgba(239, 68, 68, 0.3)' : 'none'
                                                             }
                                                         }}
                                                     />

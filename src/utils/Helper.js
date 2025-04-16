@@ -247,3 +247,8 @@ export const formatDate = (dateString) => {
         day: '2-digit'
     }).replace(',', '');
 };
+
+export const capitalizeFirstLetter = (str) => {
+    if (!str) return ''; // Handle empty/undefined strings
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}

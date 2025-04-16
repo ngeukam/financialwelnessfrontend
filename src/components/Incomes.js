@@ -53,7 +53,7 @@ const IncomeDashboard = () => {
             order = ordering[0].sort === 'asc' ? ordering[0].field : '-' + ordering[0].field
         }
         const result = await callApi({
-            url: 'personalfinance/incomes-list/', method: 'GET', params: {
+            url: 'personalfinance/incomes/', method: 'GET', params: {
                 page: paginationModel.page + 1,
                 pageSize: paginationModel.pageSize,
                 search: debounceSearch,
@@ -77,7 +77,7 @@ const IncomeDashboard = () => {
     }
     const onEditClick = (params) => {
         console.log(params);
-        navigate(`/form/income/${params.row.id}`)
+        navigate(`/pf/create/income/${params.row.id}`)
     }
     const generateColumns = () => {
         const columns = [
@@ -115,11 +115,6 @@ const IncomeDashboard = () => {
                 )
             },
             {
-                field: 'description',
-                headerName: 'Description',
-                width: 200
-            },
-            {
                 field: 'date_of_received',
                 headerName: 'Received On',
                 width: 120,
@@ -129,13 +124,18 @@ const IncomeDashboard = () => {
                     </Typography>
                 )
             },
+            {
+                field: 'created_at',
+                headerName: 'Created At',
+                width: 200,
+            },
 
         ];
         setColumns(columns);
     };
 
     const onAddClick = (params) => {
-        navigate('/form/income')
+        navigate('/pf/create/income')
     }
     const handleSorting = (newModel) => {
         setOrdering(newModel);
@@ -192,7 +192,7 @@ const IncomeDashboard = () => {
 
             <Grid container>
                 <Box sx={{ p: 2 }}>
-                    <Typography variant="h6">Recent Transactions</Typography>
+                    <Typography variant="h6">Incomes List</Typography>
                 </Box>
                 <Divider />
                 <TextField label="Search" variant="outlined" fullWidth onChange={(e) => setSearchQuery(e.target.value)} margin="normal" />

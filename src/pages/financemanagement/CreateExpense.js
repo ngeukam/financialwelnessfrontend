@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { getFormType } from "../../utils/Helper";
 import CommonInputComponent from "../../components/CommonInputComponent";
-import { Add, CheckCircle, Close, Delete, Save } from "@mui/icons-material";
+import { Add, Cancel, CheckCircle, Close, Delete, Save } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 import FileInputComponent from "../../components/FileInputComponents";
@@ -36,7 +36,6 @@ const CreateExpense = () => {
     const getFormFields = async () => {
         const idVar = id ? id + "/" : "";
         const response = await callApi({ url: `personalfinance/expense/${idVar}` });
-        console.log('response.data.data',response.data.data)
         if (response && response.status === 200) {
             setExpenseFields(response.data.data.expenseFields);
             setExpenseItemFields(response.data.data.expenseItemFields);
@@ -65,7 +64,6 @@ const CreateExpense = () => {
                 {fieldType.map((fieldT) =>
                     expenseItemFields?.[fieldT]?.map((field) => {
                         let tempField = { ...field };
-
                         // Set default values based on field name
                         if (tempField.name === 'expense_done') {
                             tempField.default = "NO";  // Default to "NO"
@@ -76,7 +74,6 @@ const CreateExpense = () => {
                         }
 
                         tempField.name = `items[${index}].${tempField.name}`;
-
                         return (
                             <TableCell key={tempField.name}>
                                 <CommonInputComponent field={tempField} sx={{ width: 200 }} />
@@ -114,10 +111,13 @@ const CreateExpense = () => {
         if (status === "DRAFT") {
             methods.clearErrors();
             await methods.trigger();
+            navigate('/pf/manage/finance');
+        }else{
+            methods.handleSubmit(onSubmit)();
         }
-        methods.handleSubmit(onSubmit)();
     };
-
+    if (loading) return <div>Loading...</div>;
+    if (error) return <div>Error loading form</div>;
     return (
         <Box>
             <FormProvider {...methods}>
@@ -140,13 +140,21 @@ const CreateExpense = () => {
                                 <Grid
                                     item
                                     xs={12}
-                                    lg={field1.name === "additional_details" ? 12 : 3}
-                                    md={field1.name === "additional_details" ? 12 : 4}
-                                    sm={field1.name === "additional_details" ? 12 : 6}
+                                    lg={field1.name === "description" ? 12 : 4}
                                     key={field1.name}
                                 >
-                                    {field1.name === "image" ? <FileInputComponent field={field1} /> : <CommonInputComponent field={field1} />}
-
+                                    {field1.name === "image" ?
+                                        <FileInputComponent field={field1} /> :
+                                        <CommonInputComponent
+                                            field={{
+                                                ...field1,
+                                                label: field1.name === "description" ? "Title of expense" : field1.label,
+                                                placeholder: field1.name === "description"
+                                                    ? "Give a title to the expense..."
+                                                    : field1.placeholder
+                                            }}
+                                        />
+                                    }
                                 </Grid>
                             ))
                         )}
@@ -191,26 +199,26 @@ const CreateExpense = () => {
 
                     <Box justifyContent={"space-between"} display={"flex"} sx={{ mt: 2 }}>
                         <Button
-                            variant="contained"
+                            variant="outlined"
                             sx={{ m: 2 }}
-                            startIcon={<Save />}
-                            color="primary"
+                            startIcon={<Cancel />}
+                            color="secondary"
                             type="button"
                             onClick={(e) => createExpense(e, "DRAFT")}
                             fullWidth
                         >
-                            Save Draft
+                           Cancel
                         </Button>
                         <Button
                             variant="contained"
                             sx={{ m: 2 }}
                             type="button"
-                            startIcon={<CheckCircle />}
+                            startIcon={<Save />}
                             color="primary"
                             fullWidth
                             onClick={(e) => createExpense(e, "ACTIVE")}
                         >
-                            {id ? "Update" : "Create"} Expense
+                            {id ? "Update" : "Save"} Expense
                         </Button>
                     </Box>
 

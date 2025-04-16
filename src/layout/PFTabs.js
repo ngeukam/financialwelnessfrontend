@@ -103,7 +103,7 @@ const PFTabs = () => {
                     <Tab label="Overview" {...a11yProps(0)} />
                     <Tab label="Incomes" {...a11yProps(1)} />
                     <Tab label="Expenses" {...a11yProps(2)} />
-                    <Tab label="Goals" {...a11yProps(3)} />
+                    <Tab label="Savings Goals" {...a11yProps(3)} />
 
                 </Tabs>
             </Box>

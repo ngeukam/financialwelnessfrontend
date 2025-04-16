@@ -79,7 +79,7 @@ const DynamicForm=({formNameVar,idVar,onSaveEvent})=>{
                 navigate(`/pf/wallet`)
             }
             else if(formName === "category"){
-                navigate(`/pf/manage/category`)
+                navigate(`/manage/category`)
             }
             else if(formName === "goal"){
                 navigate(`/pf/manage/finance`)

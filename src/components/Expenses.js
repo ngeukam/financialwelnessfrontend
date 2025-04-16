@@ -36,7 +36,7 @@ import {
     Movie
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { formatDate, getUser } from '../utils/Helper';
+import { capitalizeFirstLetter, formatDate, getUser } from '../utils/Helper';
 import { useNavigate } from 'react-router-dom';
 import useApi from "../hooks/APIHandler";
 import { DataGrid } from '@mui/x-data-grid';
@@ -100,7 +100,7 @@ const ExpenseDashboard = () => {
                 flat.push({
                     id: `${expense.id}-${item.id}`,
                     parent_id: expense.id,
-                    description: expense.description,
+                    description: capitalizeFirstLetter(expense.description)+": "+capitalizeFirstLetter(expense.expense_note),
                     category_name: item.category_name,
                     price: item.price,
                     date_of_expense: formatDate(item.date_of_expense)
@@ -116,7 +116,7 @@ const ExpenseDashboard = () => {
             order = ordering[0].sort === 'asc' ? ordering[0].field : '-' + ordering[0].field
         }
         const result = await callApi({
-            url: 'personalfinance/expenses-list/', method: 'GET', params: {
+            url: 'personalfinance/expenses/', method: 'GET', params: {
                 page: paginationModel.page + 1,
                 pageSize: paginationModel.pageSize,
                 search: debounceSearch,
@@ -190,7 +190,12 @@ const ExpenseDashboard = () => {
                         variant="outlined"
                     />
                 )
-            }
+            },
+            {
+                field: 'created_at',
+                headerName: 'Created At',
+                width: 200,
+            },
         ];
         setColumns(columns);
     };
@@ -298,7 +303,7 @@ const ExpenseDashboard = () => {
                         border: `1px solid ${theme.palette.divider}`
                     }}>
                         <Box sx={{ p: 2 }}>
-                            <Typography variant="h6">Recent Transactions</Typography>
+                            <Typography variant="h6">Expenses List</Typography>
                         </Box>
                         <Divider />
 

@@ -154,7 +154,7 @@ const ManageCategories = () => {
                 <Breadcrumbs>
                     <Typography variant="body2" onClick={() => navigate('/')}>Home</Typography>
                      <Typography variant="body2">Personal Finance</Typography>
-                    <Typography variant="body2" onClick={() => navigate('pf/manage/category')}>Manage Category</Typography>
+                    <Typography variant="body2" onClick={() => navigate('/manage/category')}>Manage Category</Typography>
                 </Breadcrumbs>
                 <Button startIcon={<AddCircle />} variant="contained" onClick={() => { navigate('/form/category') }}>Add Category</Button>
             </Box>
