@@ -1,15 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
-import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, DataUsage, DataObjectSharp, Wallet, Money, DataArray, FileDownload, FileOpenRounded, Person, MoneyOff, MoneySharp, AttachMoney } from '@mui/icons-material';
+import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, DataUsage, DataObjectSharp, Wallet, Money, DataArray, FileDownload, FileOpenRounded, Person, MoneyOff, MoneySharp, AttachMoney, Analytics } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
 import { orangeDarkTheme, orangeLightTheme, basicTheme, darkTheme, lightTheme, customTheme, blueLightTheme, blueDarkTheme, greenLightTheme, greenDarkTheme, redLightTheme, redDarkTheme } from './themes';
-import logo from '../assets/logo.svg';
 import { GlobalStyles } from './GlobalStyle';
-import TextField from '@mui/material/TextField';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'; // Import Outlet
 import { expandItem, activateItem, triggerPageChange } from '../redux/reducer/sidebardata';
 import { useDispatch } from 'react-redux';
+import { logout } from '../redux/reducer/IsLoggedInReducer';
 
 const Layout = ({ sidebarList, pageTitle, childPage }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -112,6 +111,7 @@ const Layout = ({ sidebarList, pageTitle, childPage }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/auth');
+    dispatch(logout());
     // Handle logout action
   };
 
@@ -161,6 +161,8 @@ const Layout = ({ sidebarList, pageTitle, childPage }) => {
         return <AttachMoney />;
       case 'Finance':
           return <Money />;
+      case 'FinanceAnalysis':
+          return <Analytics />;
       case 'File':
         return <FileOpenRounded />;
       case 'Personal':

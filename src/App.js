@@ -5,18 +5,14 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import ProtectedRoute from './utils/ProtectedRoute';
 import { toast, ToastContainer } from 'react-toastify';
 import Auth from './pages/Auth';
-import store from './redux/store/store';
 import { useDispatch, useSelector } from 'react-redux';
-// import { Provider } from 'react-redux';
 import { fetchSidebar } from './redux/reducer/sidebardata';
 import { useEffect, useState } from 'react';
 import DynamicForm from './pages/DynamicForm';
 import 'react-toastify/dist/ReactToastify.css';
 import './style/style.css';
 import ManageCategories from './pages/category/ManageCategories';
-import ManageProducts from './pages/products/ManageProducts';
 import Error404Page from './pages/Error404Page';
-// import ManageWarhouse from './pages/warehouse/ManageWarehouse';
 import ManageUsers from './pages/users/ManageUsers';
 import ManageModuleUrls from './pages/module/ManageModuleUrls';
 import CreatePurchaseOrder from './pages/purchaseorder/CreatePurchaseOrder';
@@ -28,6 +24,8 @@ import CreateGoal from './pages/financemanagement/CreateGoal';
 import CreateExpense from './pages/financemanagement/CreateExpense';
 import CreateIncome from './pages/financemanagement/CreateIncome';
 import useApi from './hooks/APIHandler';
+import OverviewFinancialAnalysis from './pages/financialanalysismanagement/OverviewFinancialAnalysis';
+import FinancialAnalysis from './pages/financialanalysismanagement/FinancialAnalysis';
 
 function App() {
   const { status, error, items } = useSelector(state => state.sidebardata);
@@ -43,15 +41,16 @@ function App() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-
     // Exécute immédiatement au premier rendu
     GoalsApplyWallet();
 
     // Puis toutes les 5 minutes (300000 ms)
-    const intervalId = setInterval(GoalsApplyWallet, 100000);
+    if (isLoggedIn) {
+      const intervalId = setInterval(GoalsApplyWallet, 500000);
+      // Nettoyage à la suppression du composant
+      return () => clearInterval(intervalId);
+    }
 
-    // Nettoyage à la suppression du composant
-    return () => clearInterval(intervalId);
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -79,7 +78,8 @@ function App() {
           { path: "/manage/category", element: <ProtectedRoute element={<ManageCategories />} /> },
           { path: "/pf/manage/finance", element: <ProtectedRoute element={<ManageFinance />} /> },
           { path: "/pf/wallet", element: <ProtectedRoute element={<Wallet />} /> },
-          { path: "/manage/product", element: <ProtectedRoute element={<ManageProducts />} /> },
+          { path: "/overview/financial-analysis", element: <ProtectedRoute element={<OverviewFinancialAnalysis />} /> },
+          { path: "/financial-analysis", element: <ProtectedRoute element={<FinancialAnalysis />} /> },
           { path: "/manage/data", element: <ProtectedRoute element={<ManageData />} /> },
           { path: "/manage/users", element: <ProtectedRoute element={<ManageUsers />} /> },
           { path: "/manage/moduleurls", element: <ProtectedRoute element={<ManageModuleUrls />} /> },
@@ -90,8 +90,8 @@ function App() {
           { path: "/pf/create/income", element: <ProtectedRoute element={<CreateIncome />} /> },
           { path: "/pf/create/income/:id?", element: <ProtectedRoute element={<CreateIncome />} /> },
           { path: "/pf/create/expense/:id?", element: <ProtectedRoute element={<CreateExpense />} /> },
-          { path: "/create/po/:id?", element: <ProtectedRoute element={<CreatePurchaseOrder />} /> },
-          { path: "/manage/purchaseorder", element: <ProtectedRoute element={<ManagePurchaseOrder />} /> }
+          // { path: "/create/po/:id?", element: <ProtectedRoute element={<CreatePurchaseOrder />} /> },
+          // { path: "/manage/purchaseorder", element: <ProtectedRoute element={<ManagePurchaseOrder />} /> }
         ]
       },
     ]
