@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Breadcrumbs,
-  Grid
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import FinancialAnalysisComponent from '../../components/FinancialAnalysisComponent';

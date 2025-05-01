@@ -82,6 +82,11 @@ const OverviewFinancialAnalysisComponent = () => {
                 </Typography>
 
                 <FinancialStepper/>
+                <Box textAlign="center" mt={4}>
+                    <Button variant="contained" size="large"  onClick={() => navigate('/financial-analysis')} color="primary">
+                        Get Started with Financial Analysis
+                    </Button>
+                </Box>
             </Paper>
 
             {/* Main Content Grid */}
@@ -208,11 +213,6 @@ const OverviewFinancialAnalysisComponent = () => {
                     </ListItem>
                 </List>
 
-                <Box textAlign="center" mt={4}>
-                    <Button variant="contained" size="large"  onClick={() => navigate('/financial-analysis')} color="primary">
-                        Get Started with Financial Analysis
-                    </Button>
-                </Box>
             </Paper>
 
             <Paper elevation={3} sx={{ p: 3, mt: 4 }}>

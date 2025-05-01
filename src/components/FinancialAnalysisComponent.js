@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Box,
     Typography,
@@ -7,7 +7,6 @@ import {
     Button,
     Paper,
     Grid,
-    LinearProgress,
     Table,
     TableBody,
     TableCell,
@@ -17,7 +16,8 @@ import {
     Tabs,
     Tab,
     Chip,
-    Tooltip
+    Tooltip,
+    IconButton
 } from '@mui/material';
 import {
     Assessment,
@@ -27,9 +27,11 @@ import {
     InsertDriveFile,
     CloudUpload,
     Settings,
-    Download
+    InfoOutlined,
 } from '@mui/icons-material';
 import FinancialHealthCard from './FinancialHealthCard';
+import ExportButtons from '../utils/ExportButtons';
+import * as XLSX from 'xlsx';
 
 const FinancialAnalysisComponent = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -47,6 +49,8 @@ const FinancialAnalysisComponent = () => {
         currentassetsAR: 20,
         currentAssetsInventory: 30
     });
+    const ratiosTabRef = useRef(null);
+    const zScoreTabRef = useRef(null);
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
@@ -59,6 +63,62 @@ const FinancialAnalysisComponent = () => {
             [name]: parseFloat(value) || 0
         }));
     };
+
+    const handleExcelImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                if (workbook.SheetNames.length === 0) {
+                    alert('No sheets found in the Excel file');
+                    return;
+                }
+
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                if (jsonData.length === 0) {
+                    alert('No data found in the first sheet');
+                    return;
+                }
+                const excelRow = jsonData[0];
+                const mappedData = {
+                    currentAssets: parseFloat(excelRow['Current Assets'] || excelRow['currentAssets'] || formData.currentAssets),
+                    totalAssets: parseFloat(excelRow['Total Assets'] || excelRow['totalAssets'] || formData.totalAssets),
+                    currentLiabilities: parseFloat(excelRow['Current Liabilities'] || excelRow['currentLiabilities'] || formData.currentLiabilities),
+                    totalLiabilities: parseFloat(excelRow['Total Liabilities'] || excelRow['totalLiabilities'] || formData.totalLiabilities),
+                    revenue: parseFloat(excelRow['Revenue'] || excelRow['revenue'] || formData.revenue),
+                    cogs: parseFloat(excelRow['COGS'] || excelRow['Cost of Goods Sold'] || excelRow['cogs'] || formData.cogs),
+                    operatingExpenses: parseFloat(excelRow['Operating Expenses'] || excelRow['operatingExpenses'] || formData.operatingExpenses),
+                    netIncome: parseFloat(excelRow['Net Income'] || excelRow['netIncome'] || formData.netIncome),
+                    cogsPercentage: parseFloat(excelRow['COGS %'] || excelRow['cogsPercentage'] || formData.cogsPercentage),
+                    interestExpense: parseFloat(excelRow['Interest Expense'] || excelRow['interestExpense'] || formData.interestExpense),
+                    currentassetsAR: parseFloat(excelRow['Current Assets AR %'] || excelRow['currentassetsAR'] || formData.currentassetsAR),
+                    currentAssetsInventory: parseFloat(excelRow['Current Assets Inventory %'] || excelRow['currentAssetsInventory'] || formData.currentAssetsInventory)
+                };
+                // Validate at least one field was imported
+                if (Object.values(mappedData).every(val => val === formData[Object.keys(mappedData)[0]])) {
+                    alert('No matching data found in Excel file. Please check column headers.');
+                    return;
+                }
+
+                setFormData(mappedData);
+            } catch (error) {
+                console.error('Error processing Excel file:', error);
+                alert('Error processing Excel file. Please check the format.');
+            }
+        };
+        reader.onerror = () => {
+            alert('Error reading file');
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
     const safeDivide = (numerator, denominator, fallback = 0) => {
         return denominator !== 0 ? numerator / denominator : fallback;
     };
@@ -342,12 +402,48 @@ const FinancialAnalysisComponent = () => {
                     </Grid>
 
                     <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<InsertDriveFile />}
-                        >
-                            Import from Excel
-                        </Button>
+                        <div>
+                            <input
+                                accept=".xlsx,.xls,.csv"
+                                style={{ display: 'none' }}
+                                id="excel-import"
+                                type="file"
+                                onChange={handleExcelImport}
+                            />
+                            <label htmlFor="excel-import">
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<InsertDriveFile />}
+                                    component="span"
+                                >
+                                    Import from Excel
+                                </Button>
+                            </label>
+                            <Tooltip
+                                title={
+                                    <div>
+                                        <Typography variant="body2">Excel should include these columns:</Typography>
+                                        <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
+                                            <li>Current Assets</li>
+                                            <li>Total Assets</li>
+                                            <li>Current Liabilities</li>
+                                            <li>Total Liabilities</li>
+                                            <li>Revenue</li>
+                                            <li>COGS (or Cost of Goods Sold)</li>
+                                            <li>Operating Expenses</li>
+                                            <li>Net Income</li>
+                                        </ul>
+                                        <Typography variant="caption">Column names are case-insensitive</Typography>
+                                    </div>
+                                }
+                                arrow
+                                placement="right"
+                            >
+                                <IconButton size="small">
+                                    <InfoOutlined fontSize="small" color='info' />
+                                </IconButton>
+                            </Tooltip>
+                        </div>
                         <Button
                             variant="outlined"
                             startIcon={<CloudUpload />}
@@ -355,584 +451,582 @@ const FinancialAnalysisComponent = () => {
                         >
                             Connect to Accounting Software
                         </Button>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            sx={{ ml: 'auto' }}
-                        >
-                            Calculate Financial Ratios
-                        </Button>
                     </Box>
                 </Paper>
             )}
 
             {activeTab === 1 && (
-                <Grid container spacing={3}>
-                    {/* Liquidity Ratios */}
-                    <Grid item xs={12} md={6}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom>Liquidity Ratios</Typography>
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span><strong>Current Ratio</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 1.2 - 1.8
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Measures short-term debt payment ability
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{currentRatio.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({currentRatio > 1.8 ? '↑ Above' : currentRatio < 1.2 ? '↓ Below' : '✓ Within range'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip
-                                                        title={`Ideal for construction: 1.2 - 1.8\n\n >1.8 may indicate underutilized assets\n<1.2 signals liquidity risk`}
-                                                        arrow
-                                                    >
+                <>
+                    <Grid container spacing={3} ref={ratiosTabRef}>
+                        {/* Liquidity Ratios */}
+                        <Grid item xs={12} md={6}>
+                            <Card elevation={3}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>Liquidity Ratios</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span><strong>Current Ratio</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 1.2 - 1.8
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Measures short-term debt payment ability
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{currentRatio.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({currentRatio > 1.8 ? '↑ Above' : currentRatio < 1.2 ? '↓ Below' : '✓ Within range'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip
+                                                            title={`Ideal for construction: 1.2 - 1.8\n\n >1.8 may indicate underutilized assets\n<1.2 signals liquidity risk`}
+                                                            arrow
+                                                        >
+                                                            <Chip
+                                                                label={currentRatio > 1.5 ? 'Strong' : currentRatio > 1.2 ? 'Good' : 'Risk'}
+                                                                size="small"
+                                                                color={currentRatio > 1.5 ? 'success' : currentRatio > 1.2 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: currentRatio > 1.5 ? '#f0fdf4' :
+                                                            currentRatio > 1.2 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: currentRatio > 1.5 ? '4px solid #10b981' :
+                                                            currentRatio > 1.2 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {currentRatio > 1.5 ? (
+                                                            <span>✅ <strong>Optimal:</strong> Maintain this level to handle unexpected project delays or material cost increases.</span>
+                                                        ) : currentRatio > 1.2 ? (
+                                                            <span>⚠️ <strong>Watch:</strong> Consider building cash reserves before taking on new projects.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Action:</strong> Delay non-essential equipment purchases and negotiate longer payment terms with suppliers.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Quick Ratio</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 0.8 - 1.2
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Strict liquidity measure (excludes inventory)
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{quickRatio.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({quickRatio > 1.2 ? '↑ Above' : quickRatio < 0.8 ? '↓ Below' : '✓ Within range'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip
+                                                            title={`Ideal for construction: 0.8 - 1.2\n\n>1.2 may indicate excess cash\n<0.8 signals potential cash flow issues`}
+                                                            arrow
+                                                        >
+                                                            <Chip
+                                                                label={quickRatio > 1.0 ? 'Strong' : quickRatio > 0.8 ? 'Good' : 'Risk'}
+                                                                size="small"
+                                                                color={quickRatio > 1.0 ? 'success' : quickRatio > 0.8 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: quickRatio > 1.0 ? '#f0fdf4' :
+                                                            quickRatio > 0.8 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: quickRatio > 1.0 ? '4px solid #10b981' :
+                                                            quickRatio > 0.8 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {quickRatio > 1.0 ? (
+                                                            <span>✅ <strong>Healthy:</strong> You can comfortably meet short-term obligations without selling inventory.</span>
+                                                        ) : quickRatio > 0.8 ? (
+                                                            <span>⚠️ <strong>Monitor:</strong> Reduce accounts payable or increase cash reserves for better liquidity.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Critical:</strong> Prioritize collecting receivables and avoid taking on new debt.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+
+                        {/* Solvency Ratios */}
+                        <Grid item xs={12} md={6}>
+                            <Card elevation={3}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>Solvency Ratios</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span><strong>Debt-to-Equity</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 1.0 - 2.0
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Measures financial leverage
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{debtToEquity.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({debtToEquity > 2.0 ? '↑ High' : debtToEquity < 1.0 ? '↓ Low' : '✓ Ideal'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Construction firms often carry more debt for equipment">
+                                                            <Chip
+                                                                label={debtToEquity < 1.0 ? 'Excellent' : debtToEquity < 2.0 ? 'Acceptable' : 'High Risk'}
+                                                                size="small"
+                                                                color={debtToEquity < 1.0 ? 'success' : debtToEquity < 2.0 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: debtToEquity < 1.0 ? '#f0fdf4' :
+                                                            debtToEquity < 2.0 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: debtToEquity < 1.0 ? '4px solid #10b981' :
+                                                            debtToEquity < 2.0 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {debtToEquity < 1.0 ? (
+                                                            <span>✅ <strong>Conservative:</strong> You could consider strategic borrowing for equipment upgrades.</span>
+                                                        ) : debtToEquity < 2.0 ? (
+                                                            <span>⚠️ <strong>Manageable:</strong> Focus on paying down highest interest debts first.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Danger:</strong> Immediately develop a debt reduction plan and avoid new loans.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Interest Coverage</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 3.0+
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Ability to pay interest expenses
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{interestCoverage.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({interestCoverage > 3.0 ? '✓ Safe' : interestCoverage > 1.5 ? '⚠️ Caution' : '↓ Danger'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
                                                         <Chip
-                                                            label={currentRatio > 1.5 ? 'Strong' : currentRatio > 1.2 ? 'Good' : 'Risk'}
+                                                            label={interestCoverage > 3.0 ? 'Safe' : interestCoverage > 1.5 ? 'Caution' : 'Danger'}
                                                             size="small"
-                                                            color={currentRatio > 1.5 ? 'success' : currentRatio > 1.2 ? 'warning' : 'error'}
+                                                            color={interestCoverage > 3.0 ? 'success' : interestCoverage > 1.5 ? 'warning' : 'error'}
                                                         />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: currentRatio > 1.5 ? '#f0fdf4' :
-                                                        currentRatio > 1.2 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: currentRatio > 1.5 ? '4px solid #10b981' :
-                                                        currentRatio > 1.2 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {currentRatio > 1.5 ? (
-                                                        <span>✅ <strong>Optimal:</strong> Maintain this level to handle unexpected project delays or material cost increases.</span>
-                                                    ) : currentRatio > 1.2 ? (
-                                                        <span>⚠️ <strong>Watch:</strong> Consider building cash reserves before taking on new projects.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Action:</strong> Delay non-essential equipment purchases and negotiate longer payment terms with suppliers.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: interestCoverage > 3.0 ? '#f0fdf4' :
+                                                            interestCoverage > 1.5 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: interestCoverage > 3.0 ? '4px solid #10b981' :
+                                                            interestCoverage > 1.5 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {interestCoverage > 3.0 ? (
+                                                            <span>✅ <strong>Comfortable:</strong> Your earnings comfortably cover interest payments.</span>
+                                                        ) : interestCoverage > 1.5 ? (
+                                                            <span>⚠️ <strong>Warning:</strong> Monitor cash flow closely to avoid default risk.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Emergency:</strong> Restructure debt immediately to lower interest burden.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </CardContent>
+                            </Card>
+                        </Grid>
 
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Quick Ratio</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 0.8 - 1.2
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Strict liquidity measure (excludes inventory)
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{quickRatio.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({quickRatio > 1.2 ? '↑ Above' : quickRatio < 0.8 ? '↓ Below' : '✓ Within range'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip
-                                                        title={`Ideal for construction: 0.8 - 1.2\n\n>1.2 may indicate excess cash\n<0.8 signals potential cash flow issues`}
-                                                        arrow
-                                                    >
+                        {/* Efficiency Ratios */}
+                        <Grid item xs={12} md={6}>
+                            <Card elevation={3}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>Efficiency Ratios</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span><strong>Inventory Turnover</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 4 - 6
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                How quickly materials are used
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{inventoryTurnover.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({inventoryTurnover > 6 ? '↑ Fast' : inventoryTurnover < 4 ? '↓ Slow' : '✓ Normal'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Higher is better for construction materials">
+                                                            <Chip
+                                                                label={inventoryTurnover > 5 ? 'Fast' : inventoryTurnover > 3 ? 'Normal' : 'Slow'}
+                                                                size="small"
+                                                                color={inventoryTurnover > 5 ? 'success' : inventoryTurnover > 3 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: inventoryTurnover > 5 ? '#f0fdf4' :
+                                                            inventoryTurnover > 3 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: inventoryTurnover > 5 ? '4px solid #10b981' :
+                                                            inventoryTurnover > 3 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {inventoryTurnover > 5 ? (
+                                                            <span>✅ <strong>Efficient:</strong> Your material management is excellent. Maintain supplier relationships.</span>
+                                                        ) : inventoryTurnover > 3 ? (
+                                                            <span>⚠️ <strong>Opportunity:</strong> Implement just-in-time ordering for slow-moving items.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Problem:</strong> Liquidate obsolete stock and renegotiate supplier contracts.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Receivables Turnover</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 8 - 12
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                How quickly clients pay
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{receivablesTurnover.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({receivablesTurnover > 12 ? '↑ Fast' : receivablesTurnover < 8 ? '↓ Slow' : '✓ Normal'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
                                                         <Chip
-                                                            label={quickRatio > 1.0 ? 'Strong' : quickRatio > 0.8 ? 'Good' : 'Risk'}
+                                                            label={receivablesTurnover > 10 ? 'Fast' : receivablesTurnover > 6 ? 'Normal' : 'Slow'}
                                                             size="small"
-                                                            color={quickRatio > 1.0 ? 'success' : quickRatio > 0.8 ? 'warning' : 'error'}
+                                                            color={receivablesTurnover > 10 ? 'success' : receivablesTurnover > 6 ? 'warning' : 'error'}
                                                         />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: quickRatio > 1.0 ? '#f0fdf4' :
-                                                        quickRatio > 0.8 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: quickRatio > 1.0 ? '4px solid #10b981' :
-                                                        quickRatio > 0.8 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {quickRatio > 1.0 ? (
-                                                        <span>✅ <strong>Healthy:</strong> You can comfortably meet short-term obligations without selling inventory.</span>
-                                                    ) : quickRatio > 0.8 ? (
-                                                        <span>⚠️ <strong>Monitor:</strong> Reduce accounts payable or increase cash reserves for better liquidity.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Critical:</strong> Prioritize collecting receivables and avoid taking on new debt.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: receivablesTurnover > 10 ? '#f0fdf4' :
+                                                            receivablesTurnover > 6 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: receivablesTurnover > 10 ? '4px solid #10b981' :
+                                                            receivablesTurnover > 6 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {receivablesTurnover > 10 ? (
+                                                            <span>✅ <strong>Excellent:</strong> Clients are paying promptly. Consider early payment discounts.</span>
+                                                        ) : receivablesTurnover > 6 ? (
+                                                            <span>⚠️ <strong>Improve:</strong> Tighten credit terms and follow up on overdue invoices.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Critical:</strong> Implement stricter payment terms and deposit requirements.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </CardContent>
+                            </Card>
+                        </Grid>
 
-                    {/* Solvency Ratios */}
-                    <Grid item xs={12} md={6}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom>Solvency Ratios</Typography>
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span><strong>Debt-to-Equity</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 1.0 - 2.0
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Measures financial leverage
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{debtToEquity.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({debtToEquity > 2.0 ? '↑ High' : debtToEquity < 1.0 ? '↓ Low' : '✓ Ideal'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip title="Construction firms often carry more debt for equipment">
+                        {/* Profitability Ratios */}
+                        <Grid item xs={12} md={6}>
+                            <Card elevation={3}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom>Profitability Ratios</Typography>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span><strong>Gross Margin</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 15% - 25%
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Profit after direct costs
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{(grossMargin * 100).toFixed(1)}%</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({grossMargin > 0.25 ? '↑ High' : grossMargin < 0.15 ? '↓ Low' : '✓ Standard'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Commercial projects typically have higher margins">
+                                                            <Chip
+                                                                label={grossMargin > 0.25 ? 'Strong' : grossMargin > 0.15 ? 'Average' : 'Weak'}
+                                                                size="small"
+                                                                color={grossMargin > 0.25 ? 'success' : grossMargin > 0.15 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: grossMargin > 0.25 ? '#f0fdf4' :
+                                                            grossMargin > 0.15 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: grossMargin > 0.25 ? '4px solid #10b981' :
+                                                            grossMargin > 0.15 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {grossMargin > 0.25 ? (
+                                                            <span>✅ <strong>Premium:</strong> You're pricing effectively. Consider expanding to higher-margin services.</span>
+                                                        ) : grossMargin > 0.15 ? (
+                                                            <span>⚠️ <strong>Competitive:</strong> Review material costs and labor productivity for improvements.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Danger:</strong> Re-evaluate bidding strategy. Audit for cost overruns or theft.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Net Profit Margin</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 5% - 10%
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Final profit after all expenses
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{(netProfitMargin * 100).toFixed(1)}%</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({netProfitMargin > 0.10 ? '↑ High' : netProfitMargin < 0.05 ? '↓ Low' : '✓ Standard'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Varies by project type - commercial typically higher than residential">
+                                                            <Chip
+                                                                label={netProfitMargin > 0.10 ? 'Strong' : netProfitMargin > 0.05 ? 'Average' : 'Weak'}
+                                                                size="small"
+                                                                color={netProfitMargin > 0.10 ? 'success' : netProfitMargin > 0.05 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: netProfitMargin > 0.10 ? '#f0fdf4' :
+                                                            netProfitMargin > 0.05 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: netProfitMargin > 0.10 ? '4px solid #10b981' :
+                                                            netProfitMargin > 0.05 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {netProfitMargin > 0.10 ? (
+                                                            <span>✅ <strong>Profitable:</strong> Excellent overall cost management. Reinvest in growth.</span>
+                                                        ) : netProfitMargin > 0.05 ? (
+                                                            <span>⚠️ <strong>Marginal:</strong> Review overhead costs and operational efficiency.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Loss:</strong> Immediate cost-cutting and pricing review required.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Return on Assets</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 8% - 12%
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Efficiency of asset utilization
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{(returnOnAssets * 100).toFixed(1)}%</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({returnOnAssets > 0.12 ? '↑ High' : returnOnAssets < 0.08 ? '↓ Low' : '✓ Target'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Equipment-heavy firms may have lower ROA">
+                                                            <Chip
+                                                                label={returnOnAssets > 0.10 ? 'Strong' : returnOnAssets > 0.05 ? 'Average' : 'Weak'}
+                                                                size="small"
+                                                                color={returnOnAssets > 0.10 ? 'success' : returnOnAssets > 0.05 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: returnOnAssets > 0.10 ? '#f0fdf4' :
+                                                            returnOnAssets > 0.05 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: returnOnAssets > 0.10 ? '4px solid #10b981' :
+                                                            returnOnAssets > 0.05 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {returnOnAssets > 0.10 ? (
+                                                            <span>✅ <strong>Effective:</strong> Your assets are generating strong returns.</span>
+                                                        ) : returnOnAssets > 0.05 ? (
+                                                            <span>⚠️ <strong>Moderate:</strong> Consider selling underutilized equipment.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Poor:</strong> Reassess equipment investments and utilization rates.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Return on Equity</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 15% - 20%
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Profit per dollar invested
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{(returnOnEquity * 100).toFixed(1)}%</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({returnOnEquity > 0.20 ? '↑ High' : returnOnEquity < 0.15 ? '↓ Low' : '✓ Target'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
                                                         <Chip
-                                                            label={debtToEquity < 1.0 ? 'Excellent' : debtToEquity < 2.0 ? 'Acceptable' : 'High Risk'}
+                                                            label={returnOnEquity > 0.20 ? 'Excellent' : returnOnEquity > 0.15 ? 'Good' : 'Poor'}
                                                             size="small"
-                                                            color={debtToEquity < 1.0 ? 'success' : debtToEquity < 2.0 ? 'warning' : 'error'}
+                                                            color={returnOnEquity > 0.20 ? 'success' : returnOnEquity > 0.15 ? 'warning' : 'error'}
                                                         />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: debtToEquity < 1.0 ? '#f0fdf4' :
-                                                        debtToEquity < 2.0 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: debtToEquity < 1.0 ? '4px solid #10b981' :
-                                                        debtToEquity < 2.0 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {debtToEquity < 1.0 ? (
-                                                        <span>✅ <strong>Conservative:</strong> You could consider strategic borrowing for equipment upgrades.</span>
-                                                    ) : debtToEquity < 2.0 ? (
-                                                        <span>⚠️ <strong>Manageable:</strong> Focus on paying down highest interest debts first.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Danger:</strong> Immediately develop a debt reduction plan and avoid new loans.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Interest Coverage</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 3.0+
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Ability to pay interest expenses
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{interestCoverage.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({interestCoverage > 3.0 ? '✓ Safe' : interestCoverage > 1.5 ? '⚠️ Caution' : '↓ Danger'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Chip
-                                                        label={interestCoverage > 3.0 ? 'Safe' : interestCoverage > 1.5 ? 'Caution' : 'Danger'}
-                                                        size="small"
-                                                        color={interestCoverage > 3.0 ? 'success' : interestCoverage > 1.5 ? 'warning' : 'error'}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: interestCoverage > 3.0 ? '#f0fdf4' :
-                                                        interestCoverage > 1.5 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: interestCoverage > 3.0 ? '4px solid #10b981' :
-                                                        interestCoverage > 1.5 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {interestCoverage > 3.0 ? (
-                                                        <span>✅ <strong>Comfortable:</strong> Your earnings comfortably cover interest payments.</span>
-                                                    ) : interestCoverage > 1.5 ? (
-                                                        <span>⚠️ <strong>Warning:</strong> Monitor cash flow closely to avoid default risk.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Emergency:</strong> Restructure debt immediately to lower interest burden.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-
-                    {/* Efficiency Ratios */}
-                    <Grid item xs={12} md={6}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom>Efficiency Ratios</Typography>
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span><strong>Inventory Turnover</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 4 - 6
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            How quickly materials are used
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{inventoryTurnover.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({inventoryTurnover > 6 ? '↑ Fast' : inventoryTurnover < 4 ? '↓ Slow' : '✓ Normal'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip title="Higher is better for construction materials">
-                                                        <Chip
-                                                            label={inventoryTurnover > 5 ? 'Fast' : inventoryTurnover > 3 ? 'Normal' : 'Slow'}
-                                                            size="small"
-                                                            color={inventoryTurnover > 5 ? 'success' : inventoryTurnover > 3 ? 'warning' : 'error'}
-                                                        />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: inventoryTurnover > 5 ? '#f0fdf4' :
-                                                        inventoryTurnover > 3 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: inventoryTurnover > 5 ? '4px solid #10b981' :
-                                                        inventoryTurnover > 3 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {inventoryTurnover > 5 ? (
-                                                        <span>✅ <strong>Efficient:</strong> Your material management is excellent. Maintain supplier relationships.</span>
-                                                    ) : inventoryTurnover > 3 ? (
-                                                        <span>⚠️ <strong>Opportunity:</strong> Implement just-in-time ordering for slow-moving items.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Problem:</strong> Liquidate obsolete stock and renegotiate supplier contracts.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Receivables Turnover</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 8 - 12
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            How quickly clients pay
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{receivablesTurnover.toFixed(2)}</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({receivablesTurnover > 12 ? '↑ Fast' : receivablesTurnover < 8 ? '↓ Slow' : '✓ Normal'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Chip
-                                                        label={receivablesTurnover > 10 ? 'Fast' : receivablesTurnover > 6 ? 'Normal' : 'Slow'}
-                                                        size="small"
-                                                        color={receivablesTurnover > 10 ? 'success' : receivablesTurnover > 6 ? 'warning' : 'error'}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: receivablesTurnover > 10 ? '#f0fdf4' :
-                                                        receivablesTurnover > 6 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: receivablesTurnover > 10 ? '4px solid #10b981' :
-                                                        receivablesTurnover > 6 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {receivablesTurnover > 10 ? (
-                                                        <span>✅ <strong>Excellent:</strong> Clients are paying promptly. Consider early payment discounts.</span>
-                                                    ) : receivablesTurnover > 6 ? (
-                                                        <span>⚠️ <strong>Improve:</strong> Tighten credit terms and follow up on overdue invoices.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Critical:</strong> Implement stricter payment terms and deposit requirements.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-
-                    {/* Profitability Ratios */}
-                    <Grid item xs={12} md={6}>
-                        <Card elevation={3}>
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom>Profitability Ratios</Typography>
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span><strong>Gross Margin</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 15% - 25%
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Profit after direct costs
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{(grossMargin * 100).toFixed(1)}%</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({grossMargin > 0.25 ? '↑ High' : grossMargin < 0.15 ? '↓ Low' : '✓ Standard'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip title="Commercial projects typically have higher margins">
-                                                        <Chip
-                                                            label={grossMargin > 0.25 ? 'Strong' : grossMargin > 0.15 ? 'Average' : 'Weak'}
-                                                            size="small"
-                                                            color={grossMargin > 0.25 ? 'success' : grossMargin > 0.15 ? 'warning' : 'error'}
-                                                        />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: grossMargin > 0.25 ? '#f0fdf4' :
-                                                        grossMargin > 0.15 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: grossMargin > 0.25 ? '4px solid #10b981' :
-                                                        grossMargin > 0.15 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {grossMargin > 0.25 ? (
-                                                        <span>✅ <strong>Premium:</strong> You're pricing effectively. Consider expanding to higher-margin services.</span>
-                                                    ) : grossMargin > 0.15 ? (
-                                                        <span>⚠️ <strong>Competitive:</strong> Review material costs and labor productivity for improvements.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Danger:</strong> Re-evaluate bidding strategy. Audit for cost overruns or theft.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Net Profit Margin</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 5% - 10%
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Final profit after all expenses
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{(netProfitMargin * 100).toFixed(1)}%</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({netProfitMargin > 0.10 ? '↑ High' : netProfitMargin < 0.05 ? '↓ Low' : '✓ Standard'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip title="Varies by project type - commercial typically higher than residential">
-                                                        <Chip
-                                                            label={netProfitMargin > 0.10 ? 'Strong' : netProfitMargin > 0.05 ? 'Average' : 'Weak'}
-                                                            size="small"
-                                                            color={netProfitMargin > 0.10 ? 'success' : netProfitMargin > 0.05 ? 'warning' : 'error'}
-                                                        />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: netProfitMargin > 0.10 ? '#f0fdf4' :
-                                                        netProfitMargin > 0.05 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: netProfitMargin > 0.10 ? '4px solid #10b981' :
-                                                        netProfitMargin > 0.05 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {netProfitMargin > 0.10 ? (
-                                                        <span>✅ <strong>Profitable:</strong> Excellent overall cost management. Reinvest in growth.</span>
-                                                    ) : netProfitMargin > 0.05 ? (
-                                                        <span>⚠️ <strong>Marginal:</strong> Review overhead costs and operational efficiency.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Loss:</strong> Immediate cost-cutting and pricing review required.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Return on Assets</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 8% - 12%
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Efficiency of asset utilization
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{(returnOnAssets * 100).toFixed(1)}%</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({returnOnAssets > 0.12 ? '↑ High' : returnOnAssets < 0.08 ? '↓ Low' : '✓ Target'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Tooltip title="Equipment-heavy firms may have lower ROA">
-                                                        <Chip
-                                                            label={returnOnAssets > 0.10 ? 'Strong' : returnOnAssets > 0.05 ? 'Average' : 'Weak'}
-                                                            size="small"
-                                                            color={returnOnAssets > 0.10 ? 'success' : returnOnAssets > 0.05 ? 'warning' : 'error'}
-                                                        />
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: returnOnAssets > 0.10 ? '#f0fdf4' :
-                                                        returnOnAssets > 0.05 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: returnOnAssets > 0.10 ? '4px solid #10b981' :
-                                                        returnOnAssets > 0.05 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {returnOnAssets > 0.10 ? (
-                                                        <span>✅ <strong>Effective:</strong> Your assets are generating strong returns.</span>
-                                                    ) : returnOnAssets > 0.05 ? (
-                                                        <span>⚠️ <strong>Moderate:</strong> Consider selling underutilized equipment.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Poor:</strong> Reassess equipment investments and utilization rates.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-
-                                            <TableRow>
-                                                <TableCell>
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                        <span><strong>Return on Equity</strong></span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Benchmark: 15% - 20%
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Profit per dollar invested
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span>{(returnOnEquity * 100).toFixed(1)}%</span>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({returnOnEquity > 0.20 ? '↑ High' : returnOnEquity < 0.15 ? '↓ Low' : '✓ Target'})
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Chip
-                                                        label={returnOnEquity > 0.20 ? 'Excellent' : returnOnEquity > 0.15 ? 'Good' : 'Poor'}
-                                                        size="small"
-                                                        color={returnOnEquity > 0.20 ? 'success' : returnOnEquity > 0.15 ? 'warning' : 'error'}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell colSpan={3} sx={{
-                                                    fontSize: '0.75rem',
-                                                    bgcolor: returnOnEquity > 0.15 ? '#f0fdf4' :
-                                                        returnOnEquity > 0.10 ? '#fffbeb' : '#fef2f2',
-                                                    p: 1,
-                                                    borderLeft: returnOnEquity > 0.15 ? '4px solid #10b981' :
-                                                        returnOnEquity > 0.10 ? '4px solid #f59e0b' : '4px solid #ef4444'
-                                                }}>
-                                                    {returnOnEquity > 0.15 ? (
-                                                        <span>✅ <strong>Outstanding:</strong> Shareholders are getting excellent returns.</span>
-                                                    ) : returnOnEquity > 0.10 ? (
-                                                        <span>⚠️ <strong>Acceptable:</strong> Could improve through better financial leverage.</span>
-                                                    ) : (
-                                                        <span>❌ <strong>Unacceptable:</strong> Fundamental restructuring needed.</span>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </CardContent>
-                        </Card>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell colSpan={3} sx={{
+                                                        fontSize: '0.75rem',
+                                                        bgcolor: returnOnEquity > 0.15 ? '#f0fdf4' :
+                                                            returnOnEquity > 0.10 ? '#fffbeb' : '#fef2f2',
+                                                        p: 1,
+                                                        borderLeft: returnOnEquity > 0.15 ? '4px solid #10b981' :
+                                                            returnOnEquity > 0.10 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                    }}>
+                                                        {returnOnEquity > 0.15 ? (
+                                                            <span>✅ <strong>Outstanding:</strong> Shareholders are getting excellent returns.</span>
+                                                        ) : returnOnEquity > 0.10 ? (
+                                                            <span>⚠️ <strong>Acceptable:</strong> Could improve through better financial leverage.</span>
+                                                        ) : (
+                                                            <span>❌ <strong>Unacceptable:</strong> Fundamental restructuring needed.</span>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </CardContent>
+                            </Card>
+                        </Grid>
                     </Grid>
                     <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<Download />}
-                            sx={{ ml: 'auto' }}
-                        >
-                            Export Results
-                        </Button>
+                        <ExportButtons
+                            tabRefs={[ratiosTabRef, zScoreTabRef]}
+                            activeTab={activeTab}  // Pass activeTab prop
+                        />
                     </Box>
-                </Grid>
+                </>
             )}
 
             {activeTab === 2 && (
-                <FinancialHealthCard zScoreResult={zScoreResult} />
+                <>
+                    <div ref={zScoreTabRef}>
+                        <FinancialHealthCard zScoreResult={zScoreResult} />
+                    </div>
+                    <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+                        <ExportButtons
+                            tabRefs={[ratiosTabRef, zScoreTabRef]}
+                            activeTab={activeTab}  // Pass activeTab prop
+                        />
+                    </Box>
+                </>
             )}
-
-
-
-
         </Box>
     );
 };

@@ -44,3 +44,15 @@ img.logo{
 .sidebar li{
     cursor: pointer;
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .MuiPaper-root {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
