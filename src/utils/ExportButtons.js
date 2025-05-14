@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 const ExportButtons = ({ tabRefs, activeTab }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Validates and waits for DOM elements
   const ensureElementReady = async (ref) => {
@@ -64,7 +65,7 @@ const ExportButtons = ({ tabRefs, activeTab }) => {
       const currentRef = tabRefs[activeTab - 1];
       const canvas = await captureTab(currentRef);
       const link = document.createElement('a');
-      link.download = `financial_${activeTab === 1 ? 'ratios' : 'zscore'}_${new Date().toISOString().slice(0,10)}.png`;
+      link.download = `financial_${activeTab === 1 ? 'ratios' : 'zscore'}_${new Date().toISOString().slice(0, 10)}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (error) {
@@ -75,25 +76,51 @@ const ExportButtons = ({ tabRefs, activeTab }) => {
   };
 
   const exportToPDF = async () => {
-    setIsExporting(true);
+    setIsExportingPdf(true);
     try {
+      if (!tabRefs || !Array.isArray(tabRefs)) {
+        throw new Error('Invalid tab references');
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const margin = 10;
-      const pageWidth = 190;
+      const pageWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
 
       for (let i = 0; i < tabRefs.length; i++) {
-        const canvas = await captureTab(tabRefs[i]);
-        const imgHeight = (canvas.height * pageWidth) / canvas.width;
-        
-        if (i > 0) pdf.addPage();
-        pdf.addImage(canvas, 'PNG', margin, margin, pageWidth, imgHeight);
+        try {
+          // Switch to the tab before capturing
+          // setActiveTab(i + 1);
+          // Wait for the tab to render
+          // await new Promise(resolve => setTimeout(resolve, 500));
+
+          const canvas = await captureTab(tabRefs[i]);
+          const pageHeight = pdf.internal.pageSize.getHeight() - 2 * margin;
+          const ratio = Math.min(
+            pageWidth / canvas.width,
+            pageHeight / canvas.height
+          );
+
+          // if (i > 0) pdf.addPage();
+          pdf.addImage(
+            canvas,
+            'PNG',
+            margin,
+            margin,
+            canvas.width * ratio,
+            canvas.height * ratio
+          );
+        } catch (tabError) {
+          console.error(`Failed to capture tab ${i + 1}:`, tabError);
+          continue;
+        }
       }
-      
-      pdf.save(`financial_report_${new Date().toISOString().slice(0,10)}.pdf`);
+
+      pdf.save(`financial_report_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (error) {
+      console.error('PDF Export Error:', error);
       alert(`PDF Export Error: ${error.message}`);
     } finally {
-      setIsExporting(false);
+      setIsExportingPdf(false);
     }
   };
 
@@ -106,18 +133,18 @@ const ExportButtons = ({ tabRefs, activeTab }) => {
         disabled={isExporting}
         sx={{ textTransform: 'none' }}
       >
-        {isExporting ? 'Exporting...' : 'Export As PNG'}
+        {isExporting ? 'Exporting...' : 'Export Image'}
       </Button>
-      
-      {/* <Button
+
+      <Button
         variant="contained"
-        startIcon={isExporting ? <CircularProgress size={20} /> : <PictureAsPdf />}
+        startIcon={isExportingPdf ? <CircularProgress size={20} /> : <PictureAsPdf />}
         onClick={exportToPDF}
-        disabled={isExporting}
+        disabled={isExportingPdf}
         sx={{ textTransform: 'none' }}
       >
-        {isExporting ? 'Exporting...' : 'Export PDF'}
-      </Button> */}
+        {isExportingPdf ? 'Exporting...' : 'Export PDF'}
+      </Button>
     </Box>
   );
 };

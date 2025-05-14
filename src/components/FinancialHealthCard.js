@@ -107,7 +107,6 @@ const HealthAssessmentText = ({ score, hasDebtIssue }) => {
 };
 
 const FinancialHealthCard = ({ zScoreResult }) => {
-    console.log('zScoreResult',zScoreResult)
   return (
     <Paper elevation={3} sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>

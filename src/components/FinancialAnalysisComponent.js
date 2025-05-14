@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Box,
     Typography,
@@ -28,6 +28,8 @@ import {
     CloudUpload,
     Settings,
     InfoOutlined,
+    ArrowCircleRight,
+    ArrowCircleLeft,
 } from '@mui/icons-material';
 import FinancialHealthCard from './FinancialHealthCard';
 import ExportButtons from '../utils/ExportButtons';
@@ -43,11 +45,12 @@ const FinancialAnalysisComponent = () => {
         revenue: 250000,
         cogs: 100000,
         operatingExpenses: 100000,
-        netIncome: 45000,
+        netIncome: 0,
         cogsPercentage: 30,
         interestExpense: 10000,
         currentassetsAR: 20,
-        currentAssetsInventory: 30
+        currentAssetsInventory: 30,
+        taxes: 0
     });
     const ratiosTabRef = useRef(null);
     const zScoreTabRef = useRef(null);
@@ -56,18 +59,47 @@ const FinancialAnalysisComponent = () => {
         setActiveTab(newValue);
     };
 
+    const handleNextTab = () => {
+        setActiveTab(1);
+    };
+    const handleGoBackTab0 = () => {
+        setActiveTab(0);
+    };
+    const handleGoBackTab1 = () => {
+        setActiveTab(1);
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+          setFormData(prev => ({
+            ...prev,
+            netIncome: (prev.revenue - prev.cogs - prev.operatingExpenses) - prev.taxes
+          }));
+        }, 1000);
+      
+        return () => clearTimeout(timer);
+      }, [formData, setFormData]);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: parseFloat(value) || 0
-        }));
+        const parsedValue = parseFloat(value) || 0;
+
+        setFormData(prev => {
+            const updated = {
+                ...prev,
+                [name]: parsedValue
+            };
+
+            updated.netIncome = (updated.revenue - updated.cogs - updated.operatingExpenses) - updated.taxes
+            updated.netIncome = Math.round(updated.netIncome);
+            return updated;
+        });
     };
 
     const handleExcelImport = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
+        e.target.value = null;
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -95,12 +127,13 @@ const FinancialAnalysisComponent = () => {
                     revenue: parseFloat(excelRow['Revenue'] || excelRow['revenue'] || formData.revenue),
                     cogs: parseFloat(excelRow['COGS'] || excelRow['Cost of Goods Sold'] || excelRow['cogs'] || formData.cogs),
                     operatingExpenses: parseFloat(excelRow['Operating Expenses'] || excelRow['operatingExpenses'] || formData.operatingExpenses),
-                    netIncome: parseFloat(excelRow['Net Income'] || excelRow['netIncome'] || formData.netIncome),
+                    taxes: parseFloat(excelRow['Taxes'] || excelRow['Taxe'] || formData.taxes),
                     cogsPercentage: parseFloat(excelRow['COGS %'] || excelRow['cogsPercentage'] || formData.cogsPercentage),
                     interestExpense: parseFloat(excelRow['Interest Expense'] || excelRow['interestExpense'] || formData.interestExpense),
-                    currentassetsAR: parseFloat(excelRow['Current Assets AR %'] || excelRow['currentassetsAR'] || formData.currentassetsAR),
+                    currentassetsAR: parseFloat(excelRow['Current Assets AR %'] || excelRow['Current Assets AR'] || excelRow['currentassetsAR'] || formData.currentassetsAR),
                     currentAssetsInventory: parseFloat(excelRow['Current Assets Inventory %'] || excelRow['currentAssetsInventory'] || formData.currentAssetsInventory)
                 };
+
                 // Validate at least one field was imported
                 if (Object.values(mappedData).every(val => val === formData[Object.keys(mappedData)[0]])) {
                     alert('No matching data found in Excel file. Please check column headers.');
@@ -117,6 +150,7 @@ const FinancialAnalysisComponent = () => {
             alert('Error reading file');
         };
         reader.readAsArrayBuffer(file);
+
     };
 
     const safeDivide = (numerator, denominator, fallback = 0) => {
@@ -144,6 +178,8 @@ const FinancialAnalysisComponent = () => {
         formData.revenue,
         formData.currentAssets * (formData.currentassetsAR / 100)
     );
+    const assetsTurnoverRation = safeDivide(formData.revenue, formData.totalAssets)
+
     const grossMargin = safeDivide(
         formData.revenue - formData.cogs,
         formData.revenue
@@ -234,7 +270,7 @@ const FinancialAnalysisComponent = () => {
                             <Card>
                                 <CardContent>
                                     <Typography variant="subtitle1" gutterBottom>
-                                        <TableChart sx={{ verticalAlign: 'middle', mr: 1 }} />
+                                        <TableChart sx={{ verticalAlign: 'middle', mr: 1, mb:2 }} />
                                         Balance Sheet Data
                                     </Typography>
 
@@ -293,7 +329,7 @@ const FinancialAnalysisComponent = () => {
                             <Card>
                                 <CardContent>
                                     <Typography variant="subtitle1" gutterBottom>
-                                        <TableChart sx={{ verticalAlign: 'middle', mr: 1 }} />
+                                        <TableChart sx={{ verticalAlign: 'middle', mr: 1, mb:2 }} />
                                         Income Statement Data
                                     </Typography>
 
@@ -332,7 +368,19 @@ const FinancialAnalysisComponent = () => {
                                             sx={{ mb: 2 }}
                                         />
                                     </Tooltip>
-
+                                    <Tooltip title=" Taxes" arrow>
+                                        <TextField
+                                            fullWidth
+                                            label="Taxes"
+                                            name="taxes"
+                                            value={formData.taxes}
+                                            onChange={handleInputChange}
+                                            inputProps={{ min: 0 }}
+                                            type="number"
+                                            sx={{ mb: 2 }}
+                                            placeholder="Enter taxes value"
+                                        />
+                                    </Tooltip>
                                     <Tooltip title="Final profit after all expenses (Revenue - COGS - Operating Expenses - Taxes)" arrow>
                                         <TextField
                                             fullWidth
@@ -429,9 +477,15 @@ const FinancialAnalysisComponent = () => {
                                             <li>Current Liabilities</li>
                                             <li>Total Liabilities</li>
                                             <li>Revenue</li>
-                                            <li>COGS (or Cost of Goods Sold)</li>
+                                            <li>COGS (Cost of Goods Sold)</li>
                                             <li>Operating Expenses</li>
-                                            <li>Net Income</li>
+                                            <li>Taxes</li>
+                                            <li>COGS %</li>
+                                            <li>Interest Expense</li>
+                                            <li>Current Assets AR %</li>
+                                            <li>Current Assets Inventory %</li>
+                                            
+                                            
                                         </ul>
                                         <Typography variant="caption">Column names are case-insensitive</Typography>
                                     </div>
@@ -450,6 +504,14 @@ const FinancialAnalysisComponent = () => {
                             sx={{ ml: 2 }}
                         >
                             Connect to Accounting Software
+                        </Button>
+                        <Button
+                            variant="contained"
+                            endIcon={<ArrowCircleRight />}
+                            sx={{ ml: 2 }}
+                            onClick={handleNextTab}
+                        >
+                            Next
                         </Button>
                     </Box>
                 </Paper>
@@ -772,24 +834,55 @@ const FinancialAnalysisComponent = () => {
                                                         />
                                                     </TableCell>
                                                 </TableRow>
+
+
+                                                <TableRow>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+                                                            <span><strong>Asset Turnover Ration</strong></span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                Benchmark: 0.8 - 1.5
+                                                            </Typography>
+
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <span>{assetsTurnoverRation.toFixed(2)}</span>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ({assetsTurnoverRation > 1.5 ? '↑ High' : assetsTurnoverRation < 0.8 ? '↓ Low' : '✓ Normal'})
+                                                            </Typography>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="Revenue generated per asset dollar">
+                                                            <Chip
+                                                                label={assetsTurnoverRation > 1.5 ? 'High' : assetsTurnoverRation > 0.8 ? 'Normal' : 'Low'}
+                                                                size="small"
+                                                                color={assetsTurnoverRation > 1.5 ? 'success' : assetsTurnoverRation > 0.8 ? 'warning' : 'error'}
+                                                            />
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
                                                 <TableRow>
                                                     <TableCell colSpan={3} sx={{
                                                         fontSize: '0.75rem',
-                                                        bgcolor: receivablesTurnover > 10 ? '#f0fdf4' :
-                                                            receivablesTurnover > 6 ? '#fffbeb' : '#fef2f2',
+                                                        bgcolor: assetsTurnoverRation > 1.5 ? '#f0fdf4' :
+                                                            assetsTurnoverRation > 0.8 ? '#fffbeb' : '#fef2f2',
                                                         p: 1,
-                                                        borderLeft: receivablesTurnover > 10 ? '4px solid #10b981' :
-                                                            receivablesTurnover > 6 ? '4px solid #f59e0b' : '4px solid #ef4444'
+                                                        borderLeft: assetsTurnoverRation > 1.5 ? '4px solid #10b981' :
+                                                            assetsTurnoverRation > 0.8 ? '4px solid #f59e0b' : '4px solid #ef4444'
                                                     }}>
-                                                        {receivablesTurnover > 10 ? (
-                                                            <span>✅ <strong>Excellent:</strong> Clients are paying promptly. Consider early payment discounts.</span>
-                                                        ) : receivablesTurnover > 6 ? (
-                                                            <span>⚠️ <strong>Improve:</strong> Tighten credit terms and follow up on overdue invoices.</span>
+                                                        {assetsTurnoverRation > 1.5 ? (
+                                                            <span>✅ <strong>Excellent:</strong> High asset efficiency. Optimize further for growth.</span>
+                                                        ) : assetsTurnoverRation > 0.8 ? (
+                                                            <span>⚠️ <strong>Improve:</strong> Review idle equipment and project delays.</span>
                                                         ) : (
-                                                            <span>❌ <strong>Critical:</strong> Implement stricter payment terms and deposit requirements.</span>
+                                                            <span>❌ <strong>Critical:</strong> Assets are underused. Lease/sell unused equipment.</span>
                                                         )}
                                                     </TableCell>
                                                 </TableRow>
+
                                             </TableBody>
                                         </Table>
                                     </TableContainer>
@@ -1010,7 +1103,16 @@ const FinancialAnalysisComponent = () => {
                             tabRefs={[ratiosTabRef, zScoreTabRef]}
                             activeTab={activeTab}  // Pass activeTab prop
                         />
+                        <Button
+                            variant="outlined"
+                            startIcon={<ArrowCircleLeft />}
+                            sx={{ ml: 2 }}
+                            onClick={handleGoBackTab0}
+                        >
+                            Go Back
+                        </Button>
                     </Box>
+
                 </>
             )}
 
@@ -1024,6 +1126,14 @@ const FinancialAnalysisComponent = () => {
                             tabRefs={[ratiosTabRef, zScoreTabRef]}
                             activeTab={activeTab}  // Pass activeTab prop
                         />
+                        <Button
+                            variant="outlined"
+                            startIcon={<ArrowCircleLeft />}
+                            sx={{ ml: 2 }}
+                            onClick={handleGoBackTab1}
+                        >
+                            Go Back
+                        </Button>
                     </Box>
                 </>
             )}
