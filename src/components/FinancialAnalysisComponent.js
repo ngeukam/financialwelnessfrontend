@@ -839,7 +839,7 @@ const FinancialAnalysisComponent = () => {
                                                 <TableRow>
                                                     <TableCell>
                                                         <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                                                            <span><strong>Asset Turnover Ration</strong></span>
+                                                            <span><strong>Asset Turnover Ratio</strong></span>
                                                             <Typography variant="caption" color="text.secondary">
                                                                 Benchmark: 0.8 - 1.5
                                                             </Typography>

@@ -26,6 +26,7 @@ import CreateIncome from './pages/financemanagement/CreateIncome';
 import useApi from './hooks/APIHandler';
 import OverviewFinancialAnalysis from './pages/financialanalysismanagement/OverviewFinancialAnalysis';
 import FinancialAnalysis from './pages/financialanalysismanagement/FinancialAnalysis';
+import ManageRisk from './pages/riskmanagement/ManageRisk';
 
 function App() {
   const { status, error, items } = useSelector(state => state.sidebardata);
@@ -91,7 +92,7 @@ function App() {
           { path: "/pf/create/income/:id?", element: <ProtectedRoute element={<CreateIncome />} /> },
           { path: "/pf/create/expense/:id?", element: <ProtectedRoute element={<CreateExpense />} /> },
           // { path: "/create/po/:id?", element: <ProtectedRoute element={<CreatePurchaseOrder />} /> },
-          // { path: "/manage/purchaseorder", element: <ProtectedRoute element={<ManagePurchaseOrder />} /> }
+          { path: "/manage/risk", element: <ProtectedRoute element={<ManageRisk />} /> }
         ]
       },
     ]
